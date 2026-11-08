@@ -1,0 +1,26 @@
+{
+	"$schema": "https://opencode.ai/config.json",
+	"mcp": {
+		"opencad-studio": {
+			"type": "local",
+			"command": [
+				"OpenCADStudio",
+				"--mcp"
+			],
+			"enabled": true
+		}
+	},
+	"permission": {
+		"skill": {
+			"*": "deny",
+			"autocad-mcp-premium": "allow"
+		}
+	},
+	"agent": {
+		"autocad-draftsman": {
+			"description": "Схема (JPG/PNG) -> редактируемый DWG, развертки и виды",
+			"mode": "primary",
+			"temperature": 0.1
+		}
+	}
+}
