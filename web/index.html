@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NetSketch — чертежи сетей по эскизам</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23164e8c'/%3E%3Cpath d='M7 22h6v-6h6V8h6' stroke='%23fff' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='7' cy='22' r='2.6' fill='%23f4b400'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32"><path d="M7 22h6v-6h6V8h6" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="7" cy="22" r="2.8" fill="currentColor"/></svg>
+    </span>
+    <div>
+      <h1>NetSketch</h1>
+      <p>Чертежи инженерных сетей по рукописным эскизам</p>
+    </div>
+  </div>
+  <div class="statusbar">
+    <span class="pill" id="pill-llm" title="Модуль распознавания">проверка…</span>
+    <span class="pill" id="pill-ocs" title="Open CAD Studio">CAD…</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="form-col">
+    <form id="wizard" novalidate>
+      <!-- Шаг 1 -->
+      <article class="card step">
+        <header class="step-head"><span class="num">1</span><div><h2>Тип сети</h2><p>От него зависят условные обозначения и оформление</p></div></header>
+        <div class="net-grid" id="net-grid"></div>
+      </article>
+
+      <!-- Шаг 2 -->
+      <article class="card step">
+        <header class="step-head"><span class="num">2</span><div><h2>Эскиз</h2><p>Скан или фото, PDF или изображение</p></div></header>
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp" multiple hidden />
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <strong>Перетащите файл сюда</strong>
+          <span>или нажмите, чтобы выбрать — JPG, PNG, PDF до 25 МБ</span>
+        </label>
+        <ul class="file-list" id="file-list"></ul>
+      </article>
+
+      <!-- Шаг 3 -->
+      <article class="card step">
+        <header class="step-head"><span class="num">3</span><div><h2>Лист</h2><p>Формат, ориентация и масштаб</p></div></header>
+        <div class="row">
+          <div class="field">
+            <label>Формат</label>
+            <div class="segmented" id="sheet-seg"></div>
+          </div>
+          <div class="field">
+            <label>Ориентация</label>
+            <div class="segmented" id="orient-seg">
+              <button type="button" data-value="landscape" class="active">Альбомная</button>
+              <button type="button" data-value="portrait">Портретная</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Масштаб</label>
+            <select id="scale-select">
+              <option value="0">Автоматически</option>
+              <option value="100">1:100</option>
+              <option value="200">1:200</option>
+              <option value="250">1:250</option>
+              <option value="400">1:400</option>
+              <option value="500">1:500</option>
+              <option value="1000">1:1000</option>
+            </select>
+          </div>
+        </div>
+      </article>
+
+      <!-- Шаг 4 -->
+      <article class="card step">
+        <header class="step-head"><span class="num">4</span><div><h2>Реквизиты</h2><p>Попадут в основную надпись</p></div></header>
+        <div class="grid2">
+          <div class="field span2">
+            <label for="project">Название проекта <span class="req">*</span></label>
+            <input id="project" name="project" placeholder="Газоснабжение жилой застройки" required />
+          </div>
+          <div class="field span2">
+            <label for="address">Адрес объекта <span class="req">*</span></label>
+            <input id="address" name="address" placeholder="г. Москва, ул. Примерная, д. 12" required />
+          </div>
+          <div class="field">
+            <label for="drawing_name">Наименование чертежа</label>
+            <input id="drawing_name" placeholder="Схема газоснабжения" />
+          </div>
+          <div class="field">
+            <label for="organization">Организация</label>
+            <input id="organization" placeholder="ООО «Проект»" />
+          </div>
+          <div class="field">
+            <label for="developer">Разработал</label>
+            <input id="developer" placeholder="Иванов" />
+          </div>
+          <div class="field">
+            <label for="checker">Проверил</label>
+            <input id="checker" placeholder="Петров" />
+          </div>
+        </div>
+      </article>
+
+      <div class="submit-row">
+        <p class="hint">Чертёж строится автоматически: DWG, PDF и PNG.</p>
+        <button type="submit" class="primary" id="submit-btn">Создать чертёж</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="result-col">
+    <article class="card result" id="result-card">
+      <div class="empty" id="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z M4 9h16 M8 5v14" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        <h3>Здесь появится чертёж</h3>
+        <p>Заполните шаги слева — и через минуту получите DWG, PDF и PNG.</p>
+      </div>
+
+      <div class="progress-panel" id="progress-panel" hidden>
+        <div class="progress-head">
+          <span class="spinner" id="spinner"></span>
+          <div>
+            <h3 id="progress-title">В очереди</h3>
+            <p id="progress-sub">Задача создана</p>
+          </div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+        <ul class="log" id="log"></ul>
+      </div>
+
+      <div class="done-panel" id="done-panel" hidden>
+        <div class="done-head">
+          <div>
+            <h3>Чертёж готов</h3>
+            <p id="done-sub"></p>
+          </div>
+          <span class="badge" id="done-scale"></span>
+        </div>
+        <a class="preview" id="preview-link" target="_blank" rel="noopener">
+          <img id="preview-img" alt="Предпросмотр чертежа" />
+        </a>
+        <div class="downloads" id="downloads"></div>
+        <div class="warnings" id="warnings" hidden>
+          <h4>На что обратить внимание</h4>
+          <ul id="warnings-list"></ul>
+        </div>
+        <button type="button" class="ghost" id="new-job">Новый чертёж</button>
+      </div>
+
+      <div class="wait-panel" id="wait-panel" hidden>
+        <h3>Нужно распознавание эскиза</h3>
+        <p id="wait-text"></p>
+        <div class="wait-actions">
+          <a class="ghost" id="prompt-link" target="_blank" rel="noopener">Скачать задание</a>
+        </div>
+        <label class="mini-label" for="model-json">Вставьте model.json, если распознавание сделано вручную</label>
+        <textarea id="model-json" rows="5" placeholder='{"network_type":"gas","segments":[…]}'></textarea>
+        <button type="button" class="primary small" id="send-model">Отправить модель</button>
+      </div>
+
+      <div class="error-panel" id="error-panel" hidden>
+        <h3>Не получилось</h3>
+        <pre id="error-text"></pre>
+        <button type="button" class="ghost" id="retry-btn">Повторить</button>
+      </div>
+    </article>
+
+    <article class="card history">
+      <header><h3>Готовые работы</h3><button type="button" class="link" id="refresh-history">Обновить</button></header>
+      <ul id="history-list"><li class="muted">Пока пусто</li></ul>
+    </article>
+  </aside>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

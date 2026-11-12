@@ -1,0 +1,63 @@
+{
+  "generated_by": "tools/index_examples.py",
+  "examples": [
+    {
+      "id": "gas/01",
+      "network": "gas",
+      "case": "01",
+      "dir": "examples\\gas\\01",
+      "inputs": [
+        "examples\\gas\\01\\input\\01_Фасад.jpg"
+      ],
+      "results": [],
+      "model": null,
+      "notes": "",
+      "paired": false,
+      "has_model": false
+    },
+    {
+      "id": "gas/02",
+      "network": "gas",
+      "case": "02",
+      "dir": "examples\\gas\\02",
+      "inputs": [
+        "examples\\gas\\02\\input\\02_кв1_5.jpg"
+      ],
+      "results": [],
+      "model": "examples\\gas\\02\\model.json",
+      "notes": "# Пример 02 (газ)\n\nЭскиз: ввод, магистраль Ø25, переход на Ø20, отвод Ø25, муфта, краны Ø15.\nСлева на листе — отдельная деталь (КГЗ/КЭМ) и таблица длин.\n\n`model.json` — ручной разбор этого эскиза. Координаты приблизительные\n(важна топология, а не пиксельная точность), диаметры и длины — из таблицы\nна эскизе: Ø25 — 3500, Ø20 — 2600, Ø15 — 600, наружный Ø25 — 2500, всего 9200.\n\nЭтот файл используется как few-shot пример при распознавании.\n",
+      "paired": false,
+      "has_model": true
+    },
+    {
+      "id": "heat/01",
+      "network": "heat",
+      "case": "01",
+      "dir": "examples\\heat\\01",
+      "inputs": [
+        "examples\\heat\\01\\input\\DOC_20261029125710.PDF"
+      ],
+      "results": [],
+      "model": null,
+      "notes": "",
+      "paired": false,
+      "has_model": false
+    },
+    {
+      "id": "heat/02",
+      "network": "heat",
+      "case": "02",
+      "dir": "examples\\heat\\02",
+      "inputs": [
+        "examples\\heat\\02\\input\\DOC_20261029172818.PDF"
+      ],
+      "results": [],
+      "model": null,
+      "notes": "",
+      "paired": false,
+      "has_model": false
+    }
+  ],
+  "profiles": {},
+  "errors": []
+}
