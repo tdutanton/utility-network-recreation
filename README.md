@@ -114,8 +114,52 @@ python tools\index_examples.py
 few-shot. Подробнее — `examples/README.md` и
 `skills/utility-network-drawing/references/examples-guide.md`.
 
-## CLI
+## Скилл для агентов (необязательно)
 
+Продукту скилл не нужен: правила живут в `knowledge/` и промптах, чертит код.
+Скилл нужен человеку или агенту, который будет проект дорабатывать либо
+разбирать эскизы вручную (режим «Нужно распознавание»).
+
+Лежит в `skills/utility-network-drawing/`. Чтобы он подхватывался
+автоматически в сессиях DSH, поставьте его в профиль:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install_skill.ps1
+# или ссылкой, чтобы правки в репозитории подхватывались сразу:
+powershell -File tools\install_skill.ps1 -Link
+```
+
+Дальше достаточно сказать агенту «собери чертёж по эскизу» — он загрузит
+скилл и пойдёт по описанному циклу.
+
+## Перенос на другой компьютер
+
+Код и все накопленные знания о проекте лежат в git, этого достаточно:
+
+```powershell
+git clone git@github.com:tdutanton/utility-network-recreation.git
+cd utility-network-recreation
+python -m pip install --target .pydeps -r requirements.txt
+copy .env.example .env        # вписать ключ модели
+powershell -File tools\install_skill.ps1
+run.cmd
+```
+
+Что **не** переносится намеренно:
+
+| Что | Почему | Как быть |
+|---|---|---|
+| `.env` | секрет, в git не хранится | скопировать вручную |
+| `.pydeps/` | привязка к интерпретатору | переустановить |
+| `data/` | задачи и результаты | генерируются заново |
+| Open CAD Studio | отдельная программа | установить, либо `NS_OCS_EXE` |
+
+История диалога DSH — это отдельные файлы в
+`%USERPROFILE%\.dsh\sessions\<папка-рабочей-папки>\*.jsonl.zstd`. Их можно
+скопировать, если нужен именно чат, но на работу проекта они не влияют:
+всё существенное для черчения зафиксировано в репозитории.
+
+## CLI
 ```powershell
 python -m netsketch serve                     # веб-интерфейс
 python -m netsketch build model.json --out out

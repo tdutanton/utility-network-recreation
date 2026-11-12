@@ -1,4 +1,4 @@
-# AGENTS.md — правила работы в этом репозитории
+﻿# AGENTS.md — правила работы в этом репозитории
 
 ## Что это
 
@@ -45,7 +45,7 @@ python -m pip install --target .pydeps -r requirements.txt
 | масштаб и компоновка | `layout.py` (`_pick_scale`, `build_scene`) |
 | промпт распознавания | `prompts.py`, `knowledge/*.md` |
 | HTTP-роуты | `server.py` |
-| интерфейс | `web/index.html`, `web/app.css`, `web/app.js` |
+| интерфейс | `web/index.html`, `web/styles.css`, `web/app.js` |
 
 ## Стиль кода
 
@@ -75,3 +75,4 @@ python -m pip install --target .pydeps -r requirements.txt
 `tools/smoke_test.py` зелёный, `tools/api_test.py` доходит до `done`,
 PNG просмотрен глазами, DWG открывается. Только после этого говорить
 «готово».
+
