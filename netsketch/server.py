@@ -1,4 +1,4 @@
-"""HTTP-сервер приложения: API + статический интерфейс.
+﻿"""HTTP-сервер приложения: API + статический интерфейс.
 
 Без внешних зависимостей — ThreadingHTTPServer из стандартной библиотеки.
 Модели работают «за кулисами»: пользователь видит только форму и результат.
@@ -205,7 +205,13 @@ class Handler(BaseHTTPRequestHandler):
             {
                 "ok": True,
                 "network_types": [
-                    {"id": key, "label": val.get("label", key), "discipline": val.get("discipline", "")}
+                    {
+                        "id": key,
+                        "label": val.get("label", key),
+                        "discipline": val.get("discipline", ""),
+                        "sheet": val.get("default_sheet", s.default_sheet),
+                        "orientation": val.get("default_orientation", s.default_orientation),
+                    }
                     for key, val in s.network_types.items()
                 ],
                 "sheets": ["A4", "A3", "A2", "A1"],
@@ -213,7 +219,7 @@ class Handler(BaseHTTPRequestHandler):
                     "network_type": "gas",
                     "sheet": s.default_sheet,
                     "scale": 0,
-                    "orientation": "landscape",
+                    "orientation": s.default_orientation,
                 },
                 "llm_ready": s.llm_ready,
                 "llm_provider": s.llm_provider,
@@ -226,7 +232,7 @@ class Handler(BaseHTTPRequestHandler):
         network_type = str(payload.get("network_type") or "gas")
         if network_type not in self.app.settings.network_types:
             return self._error(400, f"неизвестный тип сети: {network_type}")
-        sheet = str(payload.get("sheet") or "A3").upper().replace("А", "A")
+        sheet = str(payload.get("sheet") or self.app.settings.default_sheet).upper().replace("А", "A")
         if sheet not in {"A4", "A3", "A2", "A1", "A0"}:
             return self._error(400, "неизвестный формат листа")
         files = payload.get("files") or []
@@ -237,7 +243,7 @@ class Handler(BaseHTTPRequestHandler):
             id=self.app.store.new_id(),
             network_type=network_type,
             sheet=sheet,
-            orientation=str(payload.get("orientation") or "landscape"),
+            orientation=str(payload.get("orientation") or self.app.settings.default_orientation),
             project=str(payload.get("project") or "")[:200],
             address=str(payload.get("address") or "")[:300],
             drawing_name=str(payload.get("drawing_name") or "")[:200],
@@ -368,3 +374,4 @@ def serve(settings: Settings | None = None) -> None:
         print("\nостановлено")
     finally:
         httpd.server_close()
+

@@ -1,4 +1,4 @@
-"""Раскладка: семантическая модель → сцена листа (мм).
+﻿"""Раскладка: семантическая модель → сцена листа (мм).
 
 Здесь решается всё, что делает чертёж «как у человека»:
   * пересчёт пикселей эскиза в миллиметры и выбор масштаба;
@@ -61,6 +61,7 @@ class LayoutInfo:
     drawn_elements: int = 0
     plan_bounds: tuple[float, float, float, float] | None = None
     has_dimensions: bool = False
+    extra_notes: list[str] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------------
@@ -231,6 +232,117 @@ def _draw_dim_chain(scene: Scene, pts: list[tuple[float, float]], values_mm: lis
         )
 
 
+def _rects_overlap(a, b) -> bool:
+    return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
+
+
+def _place_labels(
+    scene: Scene,
+    model: Model,
+    transform: Transform,
+    plan: tuple[float, float, float, float],
+    route_pts: list[tuple[float, float]],
+    avoid: list[tuple[float, float, float, float]] | None = None,
+    info: LayoutInfo | None = None,
+) -> None:
+    """Подписи с эскиза: разводит наложения, далёкие уносит в примечания."""
+    placed: list[tuple[float, float, float, float]] = list(avoid or [])
+    diag = math.hypot(plan[2] - plan[0], plan[3] - plan[1])
+    far_limit = 0.10 * diag
+    detached_limit = 0.22 * diag
+
+    items = []
+    for lbl in model.labels:
+        p = transform.pt((lbl.x, lbl.y))
+        items.append((p, lbl))
+    items.sort(key=lambda it: -it[0][1])
+
+    for p, lbl in items:
+        height = max(lbl.height, 2.0)
+        width = text_width(lbl.text, height)
+
+        near = None
+        if route_pts:
+            near = min(route_pts, key=lambda q: math.dist(p, q))
+            dist = math.dist(p, near)
+        else:
+            dist = 0.0
+
+        # подпись, брошенная на эскизе далеко от трубы (отдельная деталь) —
+        # на лист не тащим, пишем в примечания
+        if near is not None and dist > detached_limit:
+            if info is not None:
+                info.extra_notes.append(lbl.text)
+            continue
+
+        # подпись рядом с трубой, но не на ней: прижимаем справа налево,
+        # чтобы текст не перечёркивал линию
+        if near is not None and dist > 6.0:
+            x = near[0] - 5.0 - width
+            if x < plan[0] + 2:
+                if info is not None:
+                    info.extra_notes.append(lbl.text)
+                continue
+            y = min(max(p[1], plan[1] + 3), plan[3] - 3)
+            scene.add(
+                Text(
+                    text=lbl.text,
+                    at=(x + width, y),
+                    height=height,
+                    rotation=lbl.rotation,
+                    layer=layer_of(model.network_type, "label") if lbl.state != ASSUMED else "ASSUMED",
+                    align="right",
+                    state=lbl.state,
+                )
+            )
+            scene.add(Line(a=(x + width + 1, y + height * 0.4), b=near, layer="TEXT", lw=0.13))
+            scene.add(Circle(c=near, r=0.6, layer="TEXT", lw=0.18))
+            placed.append((x - 1, y - height, x + width + 1, y + height * 1.4))
+            continue
+
+        x = min(max(p[0], plan[0] + 2), plan[2] - 2 - width)
+        y = min(max(p[1], plan[1] + 3), plan[3] - 3)
+        rect = (x, y - height, x + width, y + height * 1.4)
+
+        for _ in range(14):
+            if not any(_rects_overlap(rect, r) for r in placed):
+                break
+            y -= 3.6
+            if y - 3 < plan[1] + 2:
+                y = plan[3] - 3
+            rect = (x, y - height, x + width, y + height * 1.4)
+
+        layer = layer_of(model.network_type, "label") if lbl.state != ASSUMED else "ASSUMED"
+        scene.add(
+            Text(
+                text=lbl.text,
+                at=(x, y),
+                height=height,
+                rotation=lbl.rotation,
+                layer=layer,
+                state=lbl.state,
+            )
+        )
+        placed.append(rect)
+
+        # если подпись стоит далеко от трассы — показываем выноску
+        if route_pts:
+            near = min(route_pts, key=lambda q: math.dist((x + width / 2, y), q))
+            if math.dist((x + width / 2, y), near) > far_limit:
+                start = (x + width, y + height * 0.4)
+                scene.add(Line(a=start, b=near, layer=layer, lw=0.13))
+                scene.add(Circle(c=near, r=0.6, layer=layer, lw=0.18))
+
+
+def _clamp_point(
+    p: tuple[float, float], rect: tuple[float, float, float, float], margin: float = 3.0
+) -> tuple[float, float]:
+    """Держит подпись внутри поля чертежа, чтобы не лезла на штамп."""
+    x = min(max(p[0], rect[0] + margin), rect[2] - margin)
+    y = min(max(p[1], rect[1] + margin), rect[3] - margin)
+    return (x, y)
+
+
 def fmt_mm(value: int | float) -> str:
     """24000 → «24 000» (как в рукописных эскизах)."""
     return f"{int(value):,}".replace(",", " ")
@@ -354,6 +466,7 @@ def build_scene(
             info.drawn_elements += 1
 
     # ---------------- арматура и оборудование ----------------
+    element_label_rects: list[tuple[float, float, float, float]] = []
     for e in model.elements:
         p = transform.pt(e.xy)
         layer = layer_of(model.network_type, "equip")
@@ -383,6 +496,9 @@ def build_scene(
                     state=e.state,
                 )
             )
+            w = text_width(e.label, 2.0)
+            x = pos[0] if align == "left" else pos[0] - w / 2
+            element_label_rects.append((x - 1, pos[1] - 2.2, x + w + 1, pos[1] + 0.6))
 
     # ---------------- размеры ----------------
     for d in model.dimensions:
@@ -404,18 +520,8 @@ def build_scene(
         )
 
     # ---------------- свободные подписи ----------------
-    for lbl in model.labels:
-        p = transform.pt((lbl.x, lbl.y))
-        scene.add(
-            Text(
-                text=lbl.text,
-                at=p,
-                height=max(lbl.height, 2.0),
-                rotation=lbl.rotation,
-                layer=layer_of(model.network_type, "label") if lbl.state != ASSUMED else "ASSUMED",
-                state=lbl.state,
-            )
-        )
+    route_pts = [transform.pt(p) for seg in model.segments for p in seg.points]
+    _place_labels(scene, model, transform, plan, route_pts, avoid=element_label_rects, info=info)
 
     # ---------------- рамка и штамп ----------------
     scale_text = f"1:{transform.scale}"
@@ -428,6 +534,7 @@ def build_scene(
 
     # ---------------- правая колонка ----------------
     if legend_width:
+        right_bottom = sheet.frame[1] + 4 if sheet.stamp == "vertical" else sheet.title_block[3] + 4
         _draw_right_column(
             scene,
             model,
@@ -435,7 +542,7 @@ def build_scene(
             x0=plan[2] + 4,
             x1=sheet.frame[2] - 4,
             y_top=sheet.frame[3] - 4,
-            y_bottom=sheet.title_block[3] + 4,
+            y_bottom=right_bottom,
             info=info,
         )
 
@@ -462,7 +569,7 @@ def _has_manual_diameter_label(model: Model, transform: Transform, label: str, a
         if "Ø" not in lbl.text and "D" not in lbl.text.upper():
             continue
         p = transform.pt((lbl.x, lbl.y))
-        if math.dist(p, at) < 30.0:
+        if math.dist(p, at) < 60.0:
             return True
     return False
 
@@ -564,7 +671,7 @@ def _draw_right_column(
             y -= 3.0
 
     # 3. Примечания
-    notes = list(model.notes)
+    notes = list(model.notes) + list(info.extra_notes)
     if model.assumptions:
         notes.append("Данные, помеченные как ASSUMED, требуют подтверждения (слой ASSUMED).")
         notes.extend(model.assumptions[:4])
@@ -611,7 +718,7 @@ def _fit_text(value: str, width_mm: float, height: float) -> str:
 
 def _draw_spec_table(scene: Scene, spec, x0: float, x1: float, y_top: float, rows: int) -> float:
     width = x1 - x0
-    cols = [0.0, 0.34, 0.72, 0.88, 1.0]
+    cols = [0.0, 0.12, 0.52, 0.82, 1.0]
     pad = 1.0
     row_h = 5.2
     header_h = 9.0
@@ -657,4 +764,8 @@ def _draw_spec_table(scene: Scene, spec, x0: float, x1: float, y_top: float, row
     for i in range(1, 5):
         scene.add(Line(a=(x0 + width * cols[i], y_top - 7.0), b=(x0 + width * cols[i], y), layer="TABLE", lw=0.18))
     return y
+
+
+
+
 

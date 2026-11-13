@@ -2,62 +2,2378 @@
   "generated_by": "tools/index_examples.py",
   "examples": [
     {
-      "id": "gas/01",
+      "id": "gas/1",
       "network": "gas",
-      "case": "01",
-      "dir": "examples\\gas\\01",
+      "case": "1",
+      "dir": "examples\\gas\\1",
       "inputs": [
-        "examples\\gas\\01\\input\\01_Фасад.jpg"
+        "examples\\gas\\1\\input\\01_Фасад.jpg",
+        "examples\\gas\\1\\input\\02_кв1_5.jpg",
+        "examples\\gas\\1\\input\\03_кв2_6.jpg",
+        "examples\\gas\\1\\input\\04_кв3_7.jpg",
+        "examples\\gas\\1\\input\\05_кв4_8.jpg",
+        "examples\\gas\\1\\input\\06_кв9_13.jpg",
+        "examples\\gas\\1\\input\\07_кв10_19.jpg",
+        "examples\\gas\\1\\input\\08_кв_11_15.jpg",
+        "examples\\gas\\1\\input\\09_кв_12_16.jpg"
       ],
-      "results": [],
+      "pairs": [
+        {
+          "sketch": "examples\\gas\\1\\input\\01_Фасад.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\1_фасад.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\1_фасад.pdf",
+          "image": "examples\\gas\\1\\result\\jpg\\1_фасад_page-0001.jpg",
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "1_фасад.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C5bfedcad",
+              "A$C06d2972a"
+            ],
+            "entities": {
+              "LINE": 387,
+              "TEXT": 235,
+              "DIMENSION": 53,
+              "MULTILEADER": 38,
+              "ARC": 16,
+              "LWPOLYLINE": 13,
+              "MTEXT": 11,
+              "INSERT": 2
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: Новгородская область, г.Валдай, ул.Песчаная, д.15",
+              "Новгородская обл., г.Валдай, ул.Песчаная, д. 15",
+              "7",
+              "7",
+              "Евгеньев А.А.",
+              "10.26",
+              "Исполнительная схема. Схема сварных соединений. Наружные газопроводы",
+              "1",
+              "4",
+              "5",
+              "10",
+              "1-5КВ.",
+              "оп ХХХХ - расстояние между опорами (узлами крепления к стене), мм - номер сварного шва сш ХХХХ - расстояние между сварными швами, мм - опора (узел крепления к стене)",
+              "30",
+              "2",
+              "3",
+              "Фасад газ-д l = 77 м l = 5 м l = 12 м l = 2 м lобщ= 96 м",
+              "8",
+              "7",
+              "19",
+              "4000",
+              "ОП",
+              "4-8КВ.",
+              "6",
+              "СШ",
+              "4000",
+              "9-13КВ.",
+              "1000",
+              "4000",
+              "СШ",
+              "13",
+              "15",
+              "16",
+              "17",
+              "СШ",
+              "1000",
+              "18",
+              "20",
+              "22",
+              "29",
+              "26",
+              "32",
+              "2КВ.",
+              "31",
+              "СШ",
+              "6000",
+              "3000",
+              "СШ",
+              "34",
+              "СШ",
+              "500",
+              "1 под.",
+              "2500",
+              "ОП",
+              "3000",
+              "ОП",
+              "СШ",
+              "1500",
+              "СШ",
+              "6000",
+              "3000",
+              "ОП",
+              "СШ",
+              "1500"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -14874.5,
+              -511.0,
+              29939.1,
+              58085.6
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\02_кв1_5.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\2_кв1_5.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\2_кв1_5.pdf",
+          "image": "examples\\gas\\1\\result\\jpg\\2_кв1_5_page-0001.jpg",
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "2_кв1_5.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 86,
+              "TEXT": 42,
+              "LWPOLYLINE": 20,
+              "MULTILEADER": 18,
+              "ARC": 11,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "2",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 2,5 м Внутренний газ-д ст.д.25 l= 3,5 м ст.д.20 l= 2,6 м ст.д.15 l= 0,6 м Итого 9,2 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "2",
+              "09/11ПР-2026-ИОС6",
+              "2.12",
+              "КВ. 1",
+              "2.1",
+              "2.2",
+              "2.3",
+              "2.4",
+              "2.5",
+              "2.6",
+              "2.7",
+              "2.8",
+              "2.9",
+              "2.10",
+              "2.11",
+              "2.17",
+              "КВ. 5",
+              "2.13",
+              "2.14",
+              "2.15",
+              "2.16",
+              "%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "КШпр.%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -18856.4,
+              17097.4,
+              -7743.2,
+              24956.0
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\03_кв2_6.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\3_кв_2_6.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\3_кв_2_6.pdf",
+          "image": "examples\\gas\\1\\result\\jpg\\3_кв_2_6_page-0001.jpg",
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "3_кв_2_6.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 85,
+              "TEXT": 41,
+              "LWPOLYLINE": 21,
+              "MULTILEADER": 20,
+              "ARC": 8,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "3",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 1,5 м Внутренний газ-д ст.д.25 l= 3,6 м ст.д.20 l= 3,6 м ст.д.15 l= 0,6 м Итого 9,3 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "36",
+              "09/11ПР-2026-ИОС6",
+              "36.2.10",
+              "КВ. 2",
+              "36.1",
+              "36.2.2",
+              "36.2.5",
+              "36.2.6",
+              "36.2.7",
+              "36.2.14",
+              "КВ. 6",
+              "36.2.11",
+              "36.2.12",
+              "36.2.13",
+              "36.2.4",
+              "36.2.3",
+              "36.2",
+              "36.2.1",
+              "36.2.8",
+              "36.2.9",
+              "%%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Тройник %%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C32/25",
+              "КШпр.%%C25",
+              "%%C25",
+              "Переходник- американка%%C20",
+              "Отвод %%C25"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -5695.4,
+              28301.3,
+              5417.8,
+              36159.9
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\04_кв3_7.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\4_кв3_7.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\4_кв3_7.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "4_кв3_7.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 88,
+              "TEXT": 42,
+              "LWPOLYLINE": 20,
+              "MULTILEADER": 19,
+              "ARC": 10,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "4",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 1,5 м Внутренний газ-д ст.д.25 l= 3,6 м ст.д.20 l= 3,1 м ст.д.15 l= 0,6 м Итого 8,8 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "36",
+              "09/11ПР-2026-ИОС6",
+              "36.1.12",
+              "КВ. 3",
+              "36.1",
+              "36.1.3",
+              "36.1.6",
+              "36.1.7",
+              "36.1.8",
+              "36.1.16",
+              "КВ. 7",
+              "36.1.13",
+              "36.1.14",
+              "36.1.15",
+              "36.1.5",
+              "36.1.4",
+              "36.1.1",
+              "36.1.2",
+              "36.1.10",
+              "36.1.11",
+              "36.1.9",
+              "%%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Тройник %%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C32/25",
+              "КШпр.%%C25",
+              "%%C25",
+              "Отвод %%C25"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -6028.8,
+              17020.8,
+              5084.4,
+              24879.5
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\05_кв4_8.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\5_кв4_8.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\5_кв4_8.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "5_кв4_8.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 77,
+              "TEXT": 40,
+              "MULTILEADER": 15,
+              "LWPOLYLINE": 14,
+              "ARC": 8,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "5",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 2,5 м Внутренний газ-д ст.д.25 l= 4,2 м ст.д.20 l= 2,3 м ст.д.15 l= 0,3 м Итого 9,3 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "11",
+              "09/11ПР-2026-ИОС6",
+              "11.13",
+              "КВ. 4",
+              "11.1",
+              "11.2",
+              "11.3",
+              "11.4",
+              "11.5",
+              "11.6",
+              "11.7",
+              "11.9",
+              "11.10",
+              "2.10",
+              "11.12",
+              "КВ. 8",
+              "11.14",
+              "11.15",
+              "11.8",
+              "%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "КШпр.%%C25",
+              "Заглушка %%C20",
+              "Отвод %%C25"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -18856.4,
+              17097.4,
+              -7743.2,
+              24956.0
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\06_кв9_13.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\6_кв9_13.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\6_кв9_13.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "6_кв9_13.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 82,
+              "TEXT": 41,
+              "LWPOLYLINE": 20,
+              "MULTILEADER": 18,
+              "ARC": 11,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "6",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 2,5 м Внутренний газ-д ст.д.25 l= 4,0 м ст.д.20 l= 3,6 м ст.д.15 l= 0,6 м Итого 10,7 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "13",
+              "09/11ПР-2026-ИОС6",
+              "13.12",
+              "КВ. 9",
+              "13.1",
+              "13.2",
+              "13.3",
+              "13.4",
+              "13.5",
+              "13.6",
+              "13.7",
+              "13.8",
+              "13.9",
+              "13.10",
+              "13.11",
+              "КВ. 13",
+              "13.13",
+              "13.14",
+              "13.16",
+              "13.15",
+              "%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "КШпр.%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -18856.4,
+              17097.4,
+              -7743.2,
+              24956.0
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\07_кв10_19.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\7_кв10_19.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\7_кв10_19.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "7_кв10_19.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 94,
+              "TEXT": 42,
+              "LWPOLYLINE": 21,
+              "MULTILEADER": 19,
+              "ARC": 10,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "7",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 1,5 м Внутренний газ-д ст.д.25 l= 3,3 м ст.д.20 l= 4,1 м ст.д.15 l= 0,6 м Итого 9,5 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "33",
+              "09/11ПР-2026-ИОС6",
+              "33.1.10",
+              "КВ. 10",
+              "33.1",
+              "33.1.5",
+              "33.1.6",
+              "33.1.7",
+              "36.2.16",
+              "КВ. 19",
+              "33.1.11",
+              "33.1.12",
+              "36.2.15",
+              "33.1.4",
+              "33.1.3",
+              "33.1.1",
+              "33.1.2",
+              "33.1.8",
+              "33.1.9",
+              "33.1.13",
+              "33.1.14",
+              "%%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Тройник %%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C32/25",
+              "КШпр.%%C25",
+              "%%C25",
+              "Отвод %%C25"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -5695.4,
+              28301.3,
+              5417.8,
+              36159.9
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\08_кв_11_15.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\8_кв11_15.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\8_кв11_15.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "8_кв11_15.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 88,
+              "TEXT": 41,
+              "LWPOLYLINE": 20,
+              "MULTILEADER": 19,
+              "ARC": 8,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "8",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 1,5 м Внутренний газ-д ст.д.25 l= 3,3 м ст.д.20 l= 3,1 м ст.д.15 l= 0,6 м Итого 8,5 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "33",
+              "09/11ПР-2026-ИОС6",
+              "33.2.10",
+              "КВ. 11",
+              "33.1",
+              "33.2.4",
+              "33.2.6",
+              "33.2.14",
+              "КВ. 15",
+              "33.2.11",
+              "33.2.12",
+              "33.2.13",
+              "33.2.3",
+              "33.2.2",
+              "33.2",
+              "33.2.1",
+              "33.2.8",
+              "33.2.9",
+              "44.2.5",
+              "33.2.7",
+              "%%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Тройник %%C32",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C32/25",
+              "КШпр.%%C25",
+              "%%C25",
+              "Отвод %%C25"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -6028.8,
+              17020.8,
+              5084.4,
+              24879.5
+            ]
+          }
+        },
+        {
+          "sketch": "examples\\gas\\1\\input\\09_кв_12_16.jpg",
+          "dwg": "examples\\gas\\1\\result\\dwg\\9_кв12_16.dwg",
+          "pdf": "examples\\gas\\1\\result\\pdf\\9_кв12_16.pdf",
+          "image": null,
+          "sheet": {
+            "format": "A4",
+            "orientation": "portrait",
+            "width_mm": 210.0,
+            "height_mm": 297.0,
+            "exact": true
+          },
+          "profile": {
+            "source": "9_кв12_16.dwg",
+            "sheet": {
+              "format": "A4",
+              "orientation": "portrait",
+              "width_mm": 210.0,
+              "height_mm": 297.0,
+              "exact": true
+            },
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C3d0f8247",
+              "A$Cee781e95",
+              "A$C0911298b",
+              "A$C8c2b1073"
+            ],
+            "entities": {
+              "LINE": 84,
+              "TEXT": 41,
+              "LWPOLYLINE": 20,
+              "MULTILEADER": 18,
+              "ARC": 9,
+              "MTEXT": 5
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "9",
+              "9",
+              "Евгеньев А.А.",
+              "Исполнительная схема. Схема сварных соединений. Внутренние газопроводы",
+              "- номер сварного шв - опора (узел крепления к стене) - футляр",
+              "30",
+              "Наружный газ-д l= 2,5 м Внутренний газ-д ст.д.25 l= 5,0 м ст.д.20 l= 2,6 м ст.д.15 l= 0,6 м Итого 10,7 м",
+              "10.26",
+              "Капитальный ремонт систем газоснабжения многоквартирного жилого дома по адресу: город Великий Новгород, ул. Красилова, д. 51/28",
+              "город Великий Новгород, ул. Красилова, д. 51/28",
+              "22",
+              "09/11ПР-2026-ИОС6",
+              "22.12",
+              "КВ. 12",
+              "22.1",
+              "22.2",
+              "22.3",
+              "22.4",
+              "22.5",
+              "22.6",
+              "22.7",
+              "22.8",
+              "22.9",
+              "22.10",
+              "22.11",
+              "КВ. 16",
+              "22.13",
+              "22.14",
+              "11.16",
+              "11.15",
+              "%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15",
+              "Переход %%C25/20",
+              "%%C20",
+              "%%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "Отвод %%C25",
+              "КШпр.%%C25",
+              "%%C20",
+              "КТЗ%%C20",
+              "КЭМ%%C20",
+              "%%C15",
+              "Кран%%C15 ИС%%C15"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -18856.4,
+              17097.4,
+              -7743.2,
+              24956.0
+            ]
+          }
+        }
+      ],
       "model": null,
       "notes": "",
-      "paired": false,
-      "has_model": false
+      "paired": 9,
+      "results": 9
     },
     {
-      "id": "gas/02",
-      "network": "gas",
-      "case": "02",
-      "dir": "examples\\gas\\02",
-      "inputs": [
-        "examples\\gas\\02\\input\\02_кв1_5.jpg"
-      ],
-      "results": [],
-      "model": "examples\\gas\\02\\model.json",
-      "notes": "# Пример 02 (газ)\n\nЭскиз: ввод, магистраль Ø25, переход на Ø20, отвод Ø25, муфта, краны Ø15.\nСлева на листе — отдельная деталь (КГЗ/КЭМ) и таблица длин.\n\n`model.json` — ручной разбор этого эскиза. Координаты приблизительные\n(важна топология, а не пиксельная точность), диаметры и длины — из таблицы\nна эскизе: Ø25 — 3500, Ø20 — 2600, Ø15 — 600, наружный Ø25 — 2500, всего 9200.\n\nЭтот файл используется как few-shot пример при распознавании.\n",
-      "paired": false,
-      "has_model": true
-    },
-    {
-      "id": "heat/01",
+      "id": "heat/1",
       "network": "heat",
-      "case": "01",
-      "dir": "examples\\heat\\01",
+      "case": "1",
+      "dir": "examples\\heat\\1",
       "inputs": [
-        "examples\\heat\\01\\input\\DOC_20261029125710.PDF"
+        "examples\\heat\\1\\input\\draft_page-0001.jpg"
       ],
-      "results": [],
+      "pairs": [
+        {
+          "sketch": "examples\\heat\\1\\input\\draft_page-0001.jpg",
+          "dwg": "examples\\heat\\1\\result\\plot_dwg.dwg",
+          "pdf": null,
+          "image": "examples\\heat\\1\\result\\plot_jpg.jpg",
+          "sheet": {},
+          "profile": {
+            "source": "plot_dwg.dwg",
+            "sheet": {},
+            "layers": [
+              "GS_0-УЗЕЛ",
+              "SN",
+              "BL",
+              "TR_UP",
+              "TR_OS",
+              "TR_DN",
+              "PR_BL",
+              "GS_0-ПРОФИЛЬ_ТАБ",
+              "газ",
+              "ГП_Таbлицы",
+              "анп Рамка жирная",
+              "Трубы"
+            ],
+            "layer_specs": [
+              {
+                "name": "0",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-УЗЕЛ",
+                "color": 18,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "SN",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_UP",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_OS",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "TR_DN",
+                "color": 1,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "PR_BL",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "GS_0-ПРОФИЛЬ_ТАБ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "газ",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": -3
+              },
+              {
+                "name": "ГП_Таbлицы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "анп Рамка жирная",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 50
+              },
+              {
+                "name": "Трубы",
+                "color": 7,
+                "linetype": "Continuous",
+                "lineweight": 40
+              }
+            ],
+            "blocks": [
+              "shtamp_b28",
+              "ved",
+              "usl_1",
+              "usl_2",
+              "usl_3",
+              "usl_18",
+              "usl_21",
+              "pod33",
+              "_Oblique",
+              "_None",
+              "A$Cd18ca22d",
+              "_ArchTick",
+              "A$C5bfedcad",
+              "A$C06d2972a",
+              "A$C1c5f0192",
+              "A$Cfd0ae6c8"
+            ],
+            "entities": {
+              "LINE": 840,
+              "LWPOLYLINE": 403,
+              "MTEXT": 135,
+              "CIRCLE": 132,
+              "MULTILEADER": 125,
+              "TEXT": 21
+            },
+            "texts": [
+              "Изм.",
+              "Кол.уч.",
+              "Лист",
+              "№ док.",
+              "Подп.",
+              "Дата",
+              "Стадия",
+              "Лист",
+              "Листов",
+              "Н. контроль",
+              "Разработал",
+              "Проверил",
+              "ИД",
+              "ООО \"Новгородаудит-ЭНЕРГО\"",
+              "Великий Новгород",
+              "ГИП",
+              "Великий Новгород, ул. Зелинского, д.17, корп. 3",
+              "1",
+              "1",
+              "Евгеньев А.А.",
+              "10.26",
+              "Графическая схема.",
+              "- фильтр - запорная арматура",
+              "Условные обозначения:",
+              "Полипропилен Сталь",
+              "Повреждения конструктивных элементов и внутридомовых инженерных систем: 14 - следы ремонта системы в виде частичной замены трубопроводов 2 - нарушение окраски отопительных приборов и стояков 7 - нарушение теплоизоляции магистралей и стояков 12 - ржавые подтеки, хомуты, заваренные свищи 13 - протечки запорной арматуры 15 - коррозия запорно-регулирующей арматуры 17 - повреждение трубопроводов коррозией",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "14",
+              "2",
+              "2",
+              "17",
+              "7",
+              "17",
+              "7",
+              "2",
+              "2",
+              "13"
+            ],
+            "stamp": {
+              "organization": "ООО \"Новгородаудит-ЭНЕРГО",
+              "object": "городаудит-ЭНЕРГО\"",
+              "stage": "ИД"
+            },
+            "units": 1,
+            "extents_mm": [
+              -14874.5,
+              5061.5,
+              -3761.3,
+              12920.1
+            ]
+          }
+        }
+      ],
       "model": null,
       "notes": "",
-      "paired": false,
-      "has_model": false
-    },
-    {
-      "id": "heat/02",
-      "network": "heat",
-      "case": "02",
-      "dir": "examples\\heat\\02",
-      "inputs": [
-        "examples\\heat\\02\\input\\DOC_20261029172818.PDF"
-      ],
-      "results": [],
-      "model": null,
-      "notes": "",
-      "paired": false,
-      "has_model": false
+      "paired": 1,
+      "results": 1
     }
   ],
-  "profiles": {},
-  "errors": []
+  "profiles": {
+    "gas": {
+      "чертежей_в_профиле": 9,
+      "слои": [
+        "GS_0-УЗЕЛ",
+        "SN",
+        "BL",
+        "TR_UP",
+        "TR_OS",
+        "TR_DN",
+        "PR_BL",
+        "GS_0-ПРОФИЛЬ_ТАБ",
+        "газ",
+        "ГП_Таbлицы",
+        "анп Рамка жирная",
+        "Трубы"
+      ],
+      "блоки": [
+        "shtamp_b28",
+        "ved",
+        "usl_1",
+        "usl_2",
+        "usl_3",
+        "usl_18",
+        "usl_21",
+        "pod33",
+        "_Oblique",
+        "_None",
+        "_ArchTick"
+      ],
+      "листы": [
+        "A4 portrait"
+      ],
+      "штамп": [
+        "organization=ООО \"Новгородаудит-ЭНЕРГО",
+        "stage=ИД"
+      ],
+      "сущности": [
+        "LINE",
+        "TEXT",
+        "MULTILEADER",
+        "LWPOLYLINE",
+        "ARC",
+        "DIMENSION",
+        "MTEXT",
+        "INSERT"
+      ],
+      "условные_обозначения": []
+    },
+    "heat": {
+      "чертежей_в_профиле": 1,
+      "слои": [
+        "GS_0-УЗЕЛ",
+        "SN",
+        "BL",
+        "TR_UP",
+        "TR_OS",
+        "TR_DN",
+        "PR_BL",
+        "GS_0-ПРОФИЛЬ_ТАБ",
+        "газ",
+        "ГП_Таbлицы",
+        "анп Рамка жирная",
+        "Трубы"
+      ],
+      "блоки": [
+        "shtamp_b28",
+        "ved",
+        "usl_1",
+        "usl_2",
+        "usl_3",
+        "usl_18",
+        "usl_21",
+        "pod33",
+        "_Oblique",
+        "_None",
+        "_ArchTick"
+      ],
+      "листы": [],
+      "штамп": [
+        "organization=ООО \"Новгородаудит-ЭНЕРГО",
+        "stage=ИД"
+      ],
+      "сущности": [
+        "LINE",
+        "LWPOLYLINE",
+        "MTEXT",
+        "CIRCLE",
+        "MULTILEADER",
+        "TEXT"
+      ],
+      "условные_обозначения": [
+        "- фильтр - запорная арматура"
+      ]
+    }
+  },
+  "errors": [],
+  "summary": {
+    "объектов": 2,
+    "пар": 10,
+    "чертежей": 10
+  }
 }

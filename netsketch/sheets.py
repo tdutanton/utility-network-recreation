@@ -1,10 +1,15 @@
-"""Форматы листов, рамка и основная надпись (упрощённо по ГОСТ 2.104/21.1101)."""
+﻿"""Форматы листов, рамка и основная надпись (ГОСТ 2.104, форма 1 и 2).
+
+Форма 1 — штамп 185×55 в правом нижнем углу (альбомные листы).
+Форма 2 — тот же штамп, повёрнутый на 90° и прижатый к левому краю:
+так оформлены чертежи в examples/ (A4/A3 портрет, штамп слева).
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .scene import Line, Text
+from .scene import Line, Scene, Text, rotate_point
 
 # ГОСТ 2.301: размеры в мм (портрет: ширина × высота).
 FORMATS: dict[str, tuple[int, int]] = {
@@ -32,15 +37,17 @@ TITLE_H = 55.0
 
 @dataclass
 class Sheet:
-    format: str = "A3"
-    orientation: str = "landscape"
+    format: str = "A4"
+    orientation: str = "portrait"
+    stamp: str = "horizontal"  # horizontal (форма 1) | vertical (форма 2)
 
     def __post_init__(self) -> None:
         fmt = FORMAT_ALIASES.get(self.format.upper(), self.format.upper())
         if fmt not in FORMATS:
-            fmt = "A3"
+            fmt = "A4"
         self.format = fmt
-        self.orientation = "portrait" if self.orientation.lower().startswith("p") else "landscape"
+        self.orientation = "landscape" if self.orientation.lower().startswith("l") else "portrait"
+        self.stamp = "vertical" if str(self.stamp).lower().startswith("v") else "horizontal"
 
     @property
     def size(self) -> tuple[float, float]:
@@ -62,31 +69,101 @@ class Sheet:
 
     @property
     def title_block(self) -> tuple[float, float, float, float]:
-        x0, y0, x1, _ = self.frame
-        return (x1 - TITLE_W, y0, x1, y0 + TITLE_H)
+        """Габарит штампа на листе (для расчёта свободного поля)."""
+        x0, y0, x1, y1 = self.frame
+        if self.stamp == "horizontal":
+            return (x1 - TITLE_W, y0, x1, y0 + TITLE_H)
+        return (x0, y0, x0 + TITLE_H, y0 + TITLE_W)
+
+    @property
+    def stamp_strip(self) -> float:
+        """Ширина полосы, занятой вертикальным штампом."""
+        return TITLE_H + 4 if self.stamp == "vertical" else 0.0
 
     # ------------------------------------------------------------------
-    def draw(self, scene, *, title: dict[str, str], scale_text: str, doc_code: str = "") -> None:
+    def draw(self, scene: Scene, *, title: dict[str, str], scale_text: str, doc_code: str = "") -> None:
         """Рамка + основная надпись."""
         x0, y0, x1, y1 = self.frame
         scene.add(Line(a=(x0, y0), b=(x1, y0), layer="FRAME", lw=0.6))
         scene.add(Line(a=(x1, y0), b=(x1, y1), layer="FRAME", lw=0.6))
         scene.add(Line(a=(x1, y1), b=(x0, y1), layer="FRAME", lw=0.6))
         scene.add(Line(a=(x0, y1), b=(x0, y0), layer="FRAME", lw=0.6))
-        _draw_title_block(scene, self, title, scale_text, doc_code)
+        self._draw_stamp(scene, title, scale_text, doc_code)
+
+    def _draw_stamp(self, scene: Scene, title: dict[str, str], scale_text: str, doc_code: str) -> None:
+        # штамп рисуется в локальных координатах (0..185, 0..55), затем
+        # ставится на лист: как есть (форма 1) или повёрнутым (форма 2)
+        tmp = Scene()
+        _draw_title_block(tmp, (0.0, 0.0, TITLE_W, TITLE_H), title, scale_text, doc_code)
+
+        if self.stamp == "horizontal":
+            x0, y0, _, _ = self.title_block
+            for prim in tmp.prims:
+                _translate_prim(prim, x0, y0)
+                scene.add(prim)
+            return
+
+        x0, y0, _, _ = self.frame
+        for prim in tmp.prims:
+            rotated = _rotate_prim(prim, 90.0)
+            _translate_prim(rotated, x0 + TITLE_H, y0)
+            scene.add(rotated)
 
     def plan_area(self, *, legend_width: float = 0.0) -> tuple[float, float, float, float]:
         """Область для плана: рамка минус штамп и колонка легенды справа."""
         x0, y0, x1, y1 = self.frame
-        tx0, _, _, ty1 = self.title_block
+        left = x0 + self.stamp_strip
         plan_x1 = x1 - legend_width - 4 if legend_width else x1 - 4
-        # если план «наезжает» на штамп по X — поднимаем его выше штампа
-        plan_y0 = ty1 + 4 if plan_x1 > tx0 else y0 + 4
-        return (x0 + 4, plan_y0, plan_x1, y1 - 4)
+        if self.stamp == "horizontal":
+            _, _, _, ty1 = self.title_block
+            plan_y0 = ty1 + 4 if plan_x1 > self.title_block[0] else y0 + 4
+        else:
+            plan_y0 = y0 + 4
+        return (left + 4, plan_y0, plan_x1, y1 - 4)
 
 
-def _draw_title_block(scene, sheet: Sheet, title: dict[str, str], scale_text: str, doc_code: str) -> None:
-    x0, y0, x1, y1 = sheet.title_block
+# ----------------------------------------------------------------------
+def _translate_prim(prim, dx: float, dy: float) -> None:
+    if isinstance(prim, Line):
+        prim.a = (prim.a[0] + dx, prim.a[1] + dy)
+        prim.b = (prim.b[0] + dx, prim.b[1] + dy)
+    elif isinstance(prim, Text):
+        prim.at = (prim.at[0] + dx, prim.at[1] + dy)
+    else:
+        for attr in ("points", "boundary"):
+            pts = getattr(prim, attr, None)
+            if pts:
+                setattr(prim, attr, [(p[0] + dx, p[1] + dy) for p in pts])
+        if hasattr(prim, "c"):
+            prim.c = (prim.c[0] + dx, prim.c[1] + dy)
+
+
+def _rotate_prim(prim, angle: float):
+    if isinstance(prim, Line):
+        prim.a = rotate_point(prim.a, (0.0, 0.0), angle)
+        prim.b = rotate_point(prim.b, (0.0, 0.0), angle)
+    elif isinstance(prim, Text):
+        prim.at = rotate_point(prim.at, (0.0, 0.0), angle)
+        prim.rotation = (prim.rotation + angle) % 360
+    else:
+        for attr in ("points", "boundary"):
+            pts = getattr(prim, attr, None)
+            if pts:
+                setattr(prim, attr, [rotate_point(p, (0.0, 0.0), angle) for p in pts])
+        if hasattr(prim, "c"):
+            prim.c = rotate_point(prim.c, (0.0, 0.0), angle)
+    return prim
+
+
+# ----------------------------------------------------------------------
+def _draw_title_block(
+    scene: Scene,
+    rect: tuple[float, float, float, float],
+    title: dict[str, str],
+    scale_text: str,
+    doc_code: str = "",
+) -> None:
+    x0, y0, x1, y1 = rect
     W = x1 - x0
 
     def line(a, b, lw=0.35):
@@ -173,3 +250,4 @@ def _draw_title_block(scene, sheet: Sheet, title: dict[str, str], scale_text: st
 
     if doc_code:
         text(doc_code, x0 + 1.5, y0 + 1.2, 1.7)
+

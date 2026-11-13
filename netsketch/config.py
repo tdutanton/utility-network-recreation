@@ -1,4 +1,4 @@
-"""Конфигурация приложения.
+﻿"""Конфигурация приложения.
 
 Все настройки читаются из переменных окружения, при старте подхватывается
 файл `.env` рядом с корнем проекта. Никаких секретов в коде.
@@ -71,7 +71,9 @@ class Settings:
     # --- CAD ------------------------------------------------------------
     ocs_exe: str = ""
     dwg_version: str = "2018"
-    default_sheet: str = "A3"
+    default_sheet: str = "A4"
+    default_orientation: str = "portrait"
+    default_stamp: str = "horizontal"
     default_scale: int = 500
 
     # --- Поведение ------------------------------------------------------
@@ -134,7 +136,9 @@ def load_settings() -> Settings:
         llm_command=_env("NS_LLM_COMMAND"),
         ocs_exe=_find_ocs(),
         dwg_version=_env("NS_DWG_VERSION", "2018"),
-        default_sheet=_env("NS_DEFAULT_SHEET", "A3"),
+        default_sheet=_env("NS_DEFAULT_SHEET", "A4"),
+        default_orientation=_env("NS_DEFAULT_ORIENTATION", "portrait"),
+        default_stamp=_env("NS_DEFAULT_STAMP", "horizontal"),
         default_scale=_env_int("NS_DEFAULT_SCALE", 500),
         max_upload_mb=_env_int("NS_MAX_UPLOAD_MB", 25),
         open_browser=_env("NS_OPEN_BROWSER", "1") not in {"0", "false", "no"},
@@ -159,6 +163,8 @@ BUILTIN_NETWORK_TYPES: dict[str, dict[str, str]] = {
         "discipline": "ТС",
         "default_drawing": "Схема тепловой сети",
         "default_stage": "Р",
+        "default_sheet": "A3",
+        "default_orientation": "portrait",
     },
     "gas": {
         "label": "Газоснабжение",
@@ -166,6 +172,8 @@ BUILTIN_NETWORK_TYPES: dict[str, dict[str, str]] = {
         "discipline": "ГСВ",
         "default_drawing": "Схема газоснабжения",
         "default_stage": "Р",
+        "default_sheet": "A4",
+        "default_orientation": "portrait",
     },
 }
 
@@ -175,7 +183,7 @@ def discover_network_types(knowledge_dir: Path) -> dict[str, dict[str, str]]:
     if knowledge_dir.is_dir():
         for md in knowledge_dir.glob("*.md"):
             key = md.stem.lower()
-            if key in {"common", "readme", "index", "prompts", "template"}:
+            if key in {"common", "readme", "index", "prompts", "template"} or key.startswith("style"):
                 continue
             if key not in found:
                 found[key] = {
@@ -186,3 +194,6 @@ def discover_network_types(knowledge_dir: Path) -> dict[str, dict[str, str]]:
                     "default_stage": "Р",
                 }
     return found
+
+
+

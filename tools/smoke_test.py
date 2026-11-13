@@ -1,4 +1,4 @@
-"""Смоук-тест: проверяет весь путь без браузера и без модели зрения.
+﻿"""Смоук-тест: проверяет весь путь без браузера и без модели зрения.
 
     python tools/smoke_test.py
 
@@ -110,16 +110,16 @@ def run_checks(settings, work: Path, failures: list[str]) -> None:
         res = build_drawings(model, work / name, stem=f"demo_{name}", title=model.title.__dict__)
         check_artifacts(res.files, (res.sheet.width, res.sheet.height), failures, name)
 
-    print("\n[сквозной путь] эскиз examples/gas/02 + model.json → чертёж")
+    print("\n[сквозной путь] эскиз examples/gas/1 + models/2_кв1_5.json → чертёж")
     store = JobStore(work / "jobs")
     job = Job(id="smoke0001", network_type="gas", sheet="A3", project="Смоук-тест", address="г. Тест")
     store.create(job)
-    source = ROOT / "examples" / "gas" / "02" / "input" / "02_кв1_5.jpg"
+    source = ROOT / "examples" / "gas" / "1" / "input" / "02_кв1_5.jpg"
     if source.exists():
         (store.job_dir(job.id) / "input" / source.name).write_bytes(source.read_bytes())
         job.inputs = [source.name]
-    model_src = ROOT / "examples" / "gas" / "02" / "model.json"
-    (store.job_dir(job.id) / "model.json").write_text(model_src.read_text(encoding="utf-8"), encoding="utf-8")
+    model_src = ROOT / "examples" / "gas" / "1" / "models" / "2_кв1_5.json"
+    (store.job_dir(job.id) / "model.json").write_text(model_src.read_text(encoding="utf-8-sig"), encoding="utf-8")
     store.save(job)
 
     pipeline = Pipeline(settings, store)
@@ -127,7 +127,7 @@ def run_checks(settings, work: Path, failures: list[str]) -> None:
     job = store.load(job.id)
     check(job.status == "done", f"задача завершена (статус {job.status}: {job.error})", failures)
     if job.files:
-        check_artifacts(job.files, (420, 297), failures, "job")
+        check_artifacts(job.files, (210, 297), failures, "job")
 
     print("\n[листы] A4, A3, A2")
     model, _ = model_from_dict(make_demo.gas_model())
@@ -144,4 +144,5 @@ def run_checks(settings, work: Path, failures: list[str]) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

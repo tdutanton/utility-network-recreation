@@ -1,4 +1,4 @@
-﻿---
+---
 name: utility-network-drawing
 description: Use when turning a hand-drawn heat/gas network sketch (JPG/PNG/PDF scan) into an editable DWG/PDF/PNG with NetSketch, when authoring or fixing model.json for such a sketch, or when debugging scale, layout, symbols and titles of the generated sheet.
 ---
@@ -91,4 +91,11 @@ examples/               пары «эскиз → ваш DWG»
 
 `python tools/smoke_test.py` — прогоняет сборку, читает DWG обратно,
 сверяет размер PDF с листом. Всё зелёное — можно отдавать.
+
+## Оформление газовых исполнительных схем
+
+Если нужен лист «как в examples/gas/1» — A3-альбом, штамп 185×55,
+номера швов, цепи `СШ`/`ОП`, выноски и итоговый блок — используйте
+скилл `gost-drafting`, а не старую колонку «легенда/спецификация».
+
 

@@ -1,4 +1,4 @@
-"""Очередь задач, хранилище статусов и папки результатов.
+﻿"""Очередь задач, хранилище статусов и папки результатов.
 
 Задача = папка data/jobs/<id>/:
     job.json          статус и метаданные
@@ -41,8 +41,8 @@ def now_iso() -> str:
 class Job:
     id: str
     network_type: str = "gas"
-    sheet: str = "A3"
-    orientation: str = "landscape"
+    sheet: str = "A4"
+    orientation: str = "portrait"
     project: str = ""
     address: str = ""
     drawing_name: str = ""
@@ -167,3 +167,4 @@ class Worker:
                 self.current = None
                 self.queue.task_done()
                 time.sleep(0.2)
+

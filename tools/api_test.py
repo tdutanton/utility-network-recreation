@@ -1,4 +1,4 @@
-"""Проверка HTTP API без браузера: создать задачу, дождаться, скачать файлы.
+﻿"""Проверка HTTP API без браузера: создать задачу, дождаться, скачать файлы.
 
     python tools/api_test.py [http://127.0.0.1:8770]
 """
@@ -51,7 +51,7 @@ def main() -> int:
     print(f"  типы сетей:  {[n['id'] for n in options['network_types']]}")
     print(f"  форматы:     {options['sheets']}")
 
-    image = ROOT / "examples" / "gas" / "02" / "input" / "02_кв1_5.jpg"
+    image = ROOT / "examples" / "gas" / "1" / "input" / "02_кв1_5.jpg"
     payload = {
         "network_type": "gas",
         "sheet": "A3",
@@ -72,7 +72,7 @@ def main() -> int:
         job = wait_for(base, job["id"], {"waiting_agent", "error"})
         if job["status"] == "waiting_agent":
             print("  распознавание не настроено → отправляю model.json вручную")
-            model = json.loads((ROOT / "examples/gas/02/model.json").read_text(encoding="utf-8-sig"))
+            model = json.loads((ROOT / "examples/gas/1/models/2_кв1_5.json").read_text(encoding="utf-8-sig"))
             call(base, f"/api/jobs/{job['id']}/model", model)
             job = wait_for(base, job["id"], {"done", "error"})
 
@@ -101,3 +101,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -1,4 +1,4 @@
-"""Сборка промптов для распознавания эскиза."""
+﻿"""Сборка промптов для распознавания эскиза."""
 
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ def build_system_prompt(
     few_shot: list[dict] | None = None,
 ) -> str:
     network_knowledge = "\n\n".join(
-        part for part in (knowledge.get("common", ""), knowledge.get("network", "")) if part
+        part for part in (knowledge.get("common", ""), knowledge.get("network", ""), knowledge.get("observed", "")) if part
     )
     style_profile = knowledge.get("style", "") or ""
     prompt = SYSTEM_TEMPLATE.format(
@@ -122,3 +122,4 @@ def build_user_prompt(
 def _trim_model(data: dict) -> dict:
     keep = ("network_type", "title", "nodes", "segments", "elements", "legend", "notes", "specification")
     return {k: data.get(k) for k in keep if k in data}
+

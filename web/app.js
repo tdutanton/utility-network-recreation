@@ -4,8 +4,9 @@
 
   const state = {
     network: "gas",
-    sheet: "A3",
-    orientation: "landscape",
+    networkDefaults: {},
+    sheet: "A4",
+    orientation: "portrait",
     scale: 0,
     files: [],
     jobId: null,
@@ -105,9 +106,13 @@
   async function loadOptions() {
     try {
       const data = await api("/api/options");
+      state.networkDefaults = {};
+      (data.network_types || []).forEach((t) => {
+        state.networkDefaults[t.id] = { sheet: t.sheet, orientation: t.orientation };
+      });
       renderNetworks(data.network_types);
-      if (data.defaults?.sheet) setSheet(data.defaults.sheet);
       state.network = data.defaults?.network_type || "gas";
+      applyNetworkDefaults(state.network);
       markNetwork(state.network);
       if (data.llm_ready) {
         el.pillLlm.textContent = `Распознавание: ${data.llm_model || data.llm_provider}`;
@@ -158,9 +163,22 @@
       btn.addEventListener("click", () => {
         state.network = t.id;
         markNetwork(t.id);
+        applyNetworkDefaults(t.id);
       });
       el.netGrid.appendChild(btn);
     });
+  }
+
+  function applyNetworkDefaults(id) {
+    const preset = state.networkDefaults[id];
+    if (!preset) return;
+    if (preset.sheet) setSheet(preset.sheet);
+    if (preset.orientation) setOrientation(preset.orientation);
+  }
+
+  function setOrientation(value) {
+    state.orientation = value;
+    $$("#orient-seg button").forEach((b) => b.classList.toggle("active", b.dataset.value === value));
   }
 
   function markNetwork(id) {
@@ -211,8 +229,7 @@
     el.orientSeg.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn) return;
-      state.orientation = btn.dataset.value;
-      $$("#orient-seg button").forEach((b) => b.classList.toggle("active", b === btn));
+      setOrientation(btn.dataset.value);
     });
 
     el.scaleSelect.addEventListener("change", () => {

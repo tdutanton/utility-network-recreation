@@ -12,6 +12,7 @@ from .dxfout import save_dxf
 from .layout import LayoutInfo, build_scene
 from .model import Model
 from .render import write_pdf, write_preview
+from .route import orthogonalize
 from .sheets import Sheet
 
 log = logging.getLogger(__name__)
@@ -49,10 +50,14 @@ def build_drawings(
     ocs_exe: str = "",
     dwg_version: str = "2018",
     make_dwg: bool = True,
+    orthogonalize_route: bool = True,
 ) -> BuildResult:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     stem = safe_stem(stem)
+
+    if orthogonalize_route and not model.meta.get("no_orthogonalize"):
+        model = orthogonalize(model)
 
     sh = sheet or Sheet(model.sheet, model.orientation)
     scene, info = build_scene(model, sheet=sh, title=title, scale_override=scale)

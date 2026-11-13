@@ -1,4 +1,4 @@
-﻿# AGENTS.md — правила работы в этом репозитории
+# AGENTS.md — правила работы в этом репозитории
 
 ## Что это
 
@@ -32,7 +32,11 @@ python -m pip install --target .pydeps -r requirements.txt
    Домысленное — только на слой `ASSUMED` и в примечания.
 4. **Модель не рисует.** Любая «умная» логика заканчивается на `model.json`.
    Черчение — детерминированный код.
-5. **Ошибки не глотать.** Не удалось конвертировать DWG — задача `error` с
+5. **Труба не гнётся.** На листе только прямые участки и повороты 90°:
+   `route.orthogonalize()` выполняется до раскладки, иначе рукописная дрожь
+   превращается в изогнутые трубы. Диагонали допустимы только для тепловых
+   трасс (режим `straight`).
+6. **Ошибки не глотать.** Не удалось конвертировать DWG — задача `error` с
    текстом причины, а не «успех без файла».
 
 ## Где что менять
@@ -43,6 +47,7 @@ python -m pip install --target .pydeps -r requirements.txt
 | новый символ | `symbols.draw_symbol`, `model.ELEMENT_TYPES` |
 | поле штампа / рамка | `sheets.py` |
 | масштаб и компоновка | `layout.py` (`_pick_scale`, `build_scene`) |
+| геометрия трассы (90°, диагонали) | `route.py` |
 | промпт распознавания | `prompts.py`, `knowledge/*.md` |
 | HTTP-роуты | `server.py` |
 | интерфейс | `web/index.html`, `web/styles.css`, `web/app.js` |
@@ -75,4 +80,5 @@ python -m pip install --target .pydeps -r requirements.txt
 `tools/smoke_test.py` зелёный, `tools/api_test.py` доходит до `done`,
 PNG просмотрен глазами, DWG открывается. Только после этого говорить
 «готово».
+
 

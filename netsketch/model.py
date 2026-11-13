@@ -1,4 +1,4 @@
-"""Семантическая модель эскиза и её валидация.
+﻿"""Семантическая модель эскиза и её валидация.
 
 Модель — единственный контракт между «пониманием» картинки и черчением.
 Её заполняет либо модель зрения (LLM), либо человек/агент вручную.
@@ -266,8 +266,8 @@ class TitleBlock:
 @dataclass
 class Model:
     network_type: str = "gas"
-    sheet: str = "A3"
-    orientation: str = "landscape"
+    sheet: str = "A4"
+    orientation: str = "portrait"
     title: TitleBlock = field(default_factory=TitleBlock)
     image_width: int = 0
     image_height: int = 0
@@ -392,8 +392,8 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
 
     m = Model()
     m.network_type = str(data.get("network_type") or data.get("discipline") or "gas").lower()
-    m.sheet = str(data.get("sheet") or data.get("format") or "A3").upper().replace("А", "A")
-    m.orientation = str(data.get("orientation") or "landscape").lower()
+    m.sheet = str(data.get("sheet") or data.get("format") or "A4").upper().replace("А", "A")
+    m.orientation = str(data.get("orientation") or "portrait").lower()
     m.image_width = int(_num(data.get("image_width"), 0) or 0)
     m.image_height = int(_num(data.get("image_height"), 0) or 0)
     m.mm_per_px = _num(data.get("mm_per_px"))
@@ -548,3 +548,4 @@ def model_to_json(model: Model) -> str:
 def load_model_file(path: str) -> tuple[Model, list[str]]:
     with open(path, "r", encoding="utf-8-sig") as fh:
         return model_from_dict(json.load(fh))
+

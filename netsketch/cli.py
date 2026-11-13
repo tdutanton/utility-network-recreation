@@ -1,4 +1,4 @@
-"""Командная строка NetSketch.
+﻿"""Командная строка NetSketch.
 
     python -m netsketch serve                 # веб-интерфейс
     python -m netsketch build model.json      # модель → DWG/PDF/PNG
@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     p_rec = sub.add_parser("recognize", help="распознать эскиз в model.json")
     p_rec.add_argument("image")
     p_rec.add_argument("--network", default="gas")
-    p_rec.add_argument("--sheet", default="A3")
+    p_rec.add_argument("--sheet", default="A4")
     p_rec.add_argument("--project", default="")
     p_rec.add_argument("--address", default="")
     p_rec.add_argument("--out", default="")
@@ -154,3 +154,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
