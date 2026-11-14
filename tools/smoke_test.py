@@ -1,4 +1,4 @@
-﻿"""Смоук-тест: проверяет весь путь без браузера и без модели зрения.
+"""Смоук-тест: проверяет весь путь без браузера и без модели зрения.
 
     python tools/smoke_test.py
 
@@ -140,6 +140,36 @@ def run_checks(settings, work: Path, failures: list[str]) -> None:
             f"{fmt}: размер листа {res.sheet.width:.0f}×{res.sheet.height:.0f} мм",
             failures,
         )
+
+    print("\n[схема] лист ГОСТ: A3-альбом, штамп 185×55, печать A4-портрет")
+    model, _ = model_from_dict(make_demo.gas_model())
+    res = build_drawings(model, work / "schematic", stem="schematic", mode="schematic")
+    check(res.info.mode == "schematic", f"режим {res.info.mode}", failures)
+    check(res.info.stamp_corner in {"left", "right"}, f"угол штампа выбран: {res.info.stamp_corner}", failures)
+    check(
+        abs(res.sheet.width - 420) < 0.1 and abs(res.sheet.height - 297) < 0.1,
+        f"лист схемы {res.sheet.width:.0f}×{res.sheet.height:.0f} мм (A3-альбом)",
+        failures,
+    )
+    check_artifacts(res.files, (420, 297), failures, "schematic")
+    for kind in ("pdf_a4", "png_a4"):
+        path = res.files.get(kind)
+        check(bool(path) and Path(path).exists(), f"schematic: {kind} создан", failures)
+    for kind, expected in (("pdf", (420, 297)), ("pdf_a4", (210, 297))):
+        path = res.files.get(kind)
+        if not path:
+            continue
+        import pymupdf
+
+        doc = pymupdf.open(path)
+        rect = doc[0].rect
+        size = (round(rect.width / 72 * 25.4), round(rect.height / 72 * 25.4))
+        check(
+            abs(size[0] - expected[0]) <= 2 and abs(size[1] - expected[1]) <= 2,
+            f"schematic: {kind} — {size[0]}×{size[1]} мм",
+            failures,
+        )
+        doc.close()
 
 
 if __name__ == "__main__":

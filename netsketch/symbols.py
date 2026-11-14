@@ -42,15 +42,17 @@ def draw_symbol(
         return rotate_poly(pts, (x, y), rotation)
 
     if etype in {"valve", "gate_valve"}:
-        # два сходящихся треугольника (задвижка)
-        add(_tri((x - h, y + h * 0.75), (x - h, y - h * 0.75), (x, y), **kw))
-        add(_tri((x + h, y + h * 0.75), (x + h, y - h * 0.75), (x, y), **kw))
-        add(Line(a=(x, y - h * 0.9), b=(x, y + h * 0.9), **kw))
+        # два сходящихся треугольника (задвижка). При rotation=0 «бабочка»
+        # лежит ВДОЛЬ оси X: основания вертикальные на x±0,91h, ширина ±0,52h.
+        add(_tri(*rot([(x - h * 0.91, y + h * 0.52), (x - h * 0.91, y - h * 0.52), (x, y)]), **kw))
+        add(_tri(*rot([(x + h * 0.91, y + h * 0.52), (x + h * 0.91, y - h * 0.52), (x, y)]), **kw))
+        add(Line(a=rot([(x, y - h * 0.9)])[0], b=rot([(x, y + h * 0.9)])[0], **kw))
 
     elif etype == "valve_ball":
-        add(Circle(c=(x, y), r=h * 0.55, **kw))
-        add(_tri((x - h, y + h * 0.75), (x - h, y - h * 0.75), (x - h * 0.45, y), **kw))
-        add(_tri((x + h, y + h * 0.75), (x + h, y - h * 0.75), (x + h * 0.45, y), **kw))
+        # кран: «бабочка» из двух сходящихся треугольников вдоль трубы
+        # (в эталонных схемах кран рисуют так же, как задвижку, без кружка)
+        add(_tri(*rot([(x - h * 0.91, y + h * 0.52), (x - h * 0.91, y - h * 0.52), (x, y)]), **kw))
+        add(_tri(*rot([(x + h * 0.91, y + h * 0.52), (x + h * 0.91, y - h * 0.52), (x, y)]), **kw))
 
     elif etype == "filter":
         add(Polyline(points=rot([(x - h, y), (x, y + h), (x + h, y), (x, y - h)]), closed=True, **kw))
@@ -93,10 +95,6 @@ def draw_symbol(
         add(Polyline(points=rot([(x - h * 1.2, y - h), (x + h * 1.2, y - h), (x + h * 1.2, y + h), (x - h * 1.2, y + h)]), closed=True, **kw))
         add(Line(a=(x - h * 1.2, y + h * 0.3), b=(x + h * 1.2, y + h * 0.3), **kw))
 
-    elif etype == "sleeve":
-        add(Polyline(points=rot([(x - h * 1.4, y - h * 0.55), (x + h * 1.4, y - h * 0.55)]), **kw))
-        add(Polyline(points=rot([(x - h * 1.4, y + h * 0.55), (x + h * 1.4, y + h * 0.55)]), **kw))
-
     elif etype == "hydrolock":
         add(
             Polyline(
@@ -114,14 +112,69 @@ def draw_symbol(
             )
         )
 
-    elif etype in {"tee", "cross", "coupling", "riser"}:
+    elif etype in {"tee", "cross", "riser"}:
         add(Circle(c=(x, y), r=h * 0.35, **kw))
         if etype == "cross":
             add(Line(a=(x - h * 0.6, y), b=(x + h * 0.6, y), **kw))
             add(Line(a=(x, y - h * 0.6), b=(x, y + h * 0.6), **kw))
 
+    elif etype in {"kgz", "kem"}:
+        # КЭМ — небольшой квадрат 2×2 мм на трубе;
+        # КТЗ/КГЗ — такой же квадрат + треугольник-указатель слева
+        add(
+            Polyline(
+                points=rot([(x - h * 0.45, y - h * 0.45), (x + h * 0.45, y - h * 0.45),
+                            (x + h * 0.45, y + h * 0.45), (x - h * 0.45, y + h * 0.45)]),
+                closed=True,
+                **kw,
+            )
+        )
+        if etype == "kgz":
+            add(
+                _tri(
+                    *rot([(x - h * 1.36, y - h * 0.48), (x - h * 1.36, y + h * 0.48), (x - h * 0.45, y)]),
+                    **kw,
+                )
+            )
+
     elif etype == "reducer":
-        add(Polyline(points=rot([(x - h, y - h), (x + h, y - h * 0.45), (x + h, y + h * 0.45), (x - h, y + h)]), closed=True, **kw))
+        # переход: треугольник на трубе, сужается в сторону меньшего диаметра
+        # (вершина показывает направление на меньший проход)
+        add(
+            Polyline(
+                points=rot([(x - h, y - h * 0.85), (x + h, y), (x - h, y + h * 0.85)]),
+                closed=True,
+                **kw,
+            )
+        )
+
+    elif etype == "sleeve":
+        # проход через стену (гильза/футляр): прямоугольник вокруг трубы,
+        # длинной стороной вдоль неё (8,6 мм) и толщиной 3 мм
+        add(
+            Polyline(
+                points=rot([(x - h * 2.1, y - h * 0.75), (x + h * 2.1, y - h * 0.75),
+                            (x + h * 2.1, y + h * 0.75), (x - h * 2.1, y + h * 0.75)]),
+                closed=True,
+                **kw,
+            )
+        )
+
+    elif etype == "fork":
+        # вилка: труба делится на две — полукруг над местом разделения,
+        # ветки расходятся на ±size
+        add(Arc(c=(x, y), r=s, a0=rotation, a1=rotation + 180.0, **kw))
+
+    elif etype == "facade_link":
+        # пунктир: фасадный газопровод показан двумя длинными штрихами
+        # с разрывом — чтобы сопоставить лист фасада с этим узлом
+        add(Line(a=rot([(x - s * 1.15, y)])[0], b=rot([(x - s * 0.15, y)])[0], **kw))
+        add(Line(a=rot([(x + s * 0.15, y)])[0], b=rot([(x + s * 1.15, y)])[0], **kw))
+
+    elif etype == "coupling":
+        # муфта: две черты поперёк трубы
+        add(Line(a=(x - h * 0.5, y - h), b=(x - h * 0.5, y + h), **kw))
+        add(Line(a=(x + h * 0.5, y - h), b=(x + h * 0.5, y + h), **kw))
 
     elif etype == "flange":
         add(Line(a=(x - h * 0.25, y - h), b=(x - h * 0.25, y + h), **kw))

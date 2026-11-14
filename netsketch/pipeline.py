@@ -124,6 +124,8 @@ class Pipeline:
             model_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
             model, warns = model_from_dict(payload)
             job.warnings.extend(warns)
+            # проверки распознавания (швы/.1, Ø/0, СШ/ОП, итог) видны в задаче
+            job.warnings.extend(result.warnings or [])
             job.mm_per_px = model.mm_per_px
             self.store.log(job, f"распознано моделью {result.provider}/{result.model} за {result.elapsed:.1f} с")
             job.specs = {

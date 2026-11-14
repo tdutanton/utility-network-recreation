@@ -1,6 +1,6 @@
 # HANDOFF: газовые эталонные листы
 
-Состояние на 13.11.2026. Рабочая папка: `D:\private\utility-network-recreation`.
+Состояние на 13.11.2026. Рабочая папка: `C:\Private\github\utility-network-recreation`.
 
 ## Что уже решено
 
@@ -13,44 +13,54 @@
 * Реквизиты эталона: `09/11ПР-2026-ИОС6`, `ООО "Новгородаудит-ЭНЕРГО"`,
   `Евгеньев А.А.`, `ИД`, 9 листов.
 * В `examples/gas/1/models/2_кв1_5.json` реквизиты неверные — модель надо
-  переписать.
+  переписать (это работа фазы 4).
 
 ## Что создано
 
 | Файл | Что |
 |---|---|
-| `knowledge/style-observed.md` | факты по 9 листам |
-| `knowledge/gas-etalon-plan.md` | разрывы и план по 6 фазам |
-| `skills/gost-drafting/SKILL.md` | скилл: рамка/штамп/поворот |
-| `skills/gost-drafting/references/observed-gas-template.md` | точная сетка 185×55 |
-| `skills/gost-drafting/references/gost-2.104.md` | нормативная выжимка |
-| `skills/gost-drafting/references/annotations.md` | правила аннотаций |
-| `skills/gost-drafting/scripts/gost_sheet.py` | генератор A3/A4, DXF/PDF/PNG |
+| `netsketch/gost_sheet.py` | лист ГОСТ 2.104: A3, штамп 185×55, угол, A4-печать |
+| `netsketch/annotations.py` | швы, опоры, выноски, квартиры, цепи, итог |
+| `netsketch/layout.py` | `build_schematic_scene`, вписывание и компоновка |
+| `netsketch/build.py` | режимы `plan` / `schematic`, печатный A4 |
+| `tools/gost_verify.py` | приёмка листа, компоновки и эталонной модели |
+| `tools/recognize_check.py` | приёмка распознавания: ожидания из 9 DWG + самопроверка |
+| `examples/gas/1/sheet-etalon.json` | фактические данные эталона из 9 DWG |
+| `examples/gas/1/etalon-expectations.json` | швы/шифр/итог по каждому из 9 листов |
+| `examples/gas/1/models/2_кв1_5.schematic.json` | модель листа 2 в мм листа |
+| `knowledge/style-observed.md` | факты по 9 листам, точные координаты штампа |
+| `knowledge/gas-etalon-plan.md` | разрывы и план по 6 фазам, статус |
+| `skills/gost-drafting/` | скилл: рамка/штамп/поворот, аннотации, скрипт |
+| `skills/gost-gas-documentation/` | скилл: ГОСТ 21.609 / 21.710, примеры, обозначения |
 
-Скилл установлен в `%USERPROFILE%\.dsh\skills\gost-drafting` и виден
-в каталоге DSH.
+Скиллы из `skills/` ставятся одной командой: `tools\install_skill.ps1`
+(все сразу) или `-Name <скилл>` (один), `-Link` — junction вместо копии.
 
 ## Проверено
 
-* A3 PDF — 420×297; A4 PDF — 210×297;
-* DXF проходит `ezdxf` audit без ошибок;
-* оба угла штампа и вертикальный вариант собираются;
-* штамп визуально сверен с эталоном.
+* `python tools\gost_verify.py` — всё зелёное: сетка 9 вертикалей и
+  14 горизонталей, 13 текстовых граф, оба угла, A3 420×297, A4 210×297,
+  33 длинных отрезка печати совпали с эталонным PDF, компоновка без
+  пересечений, эталонная модель собирается (18 швов, 9 опор, 21 выноска);
+* `python tools\recognize_check.py --selftest` — эталонная модель сходится
+  с ожиданиями из DWG, негативные кейсы (суффикс, шифр, итог, Ø/0, СШ/СП)
+  ловятся;
+* `python tools\smoke_test.py` — всё зелёное, включая режим `schematic`
+  и чтение DWG обратно;
+* PNG листа и печати просмотрены глазами.
 
-## Открытый вопрос
+## Что дальше
 
-С чего начинать внедрение:
-
-1. шаблон листа в NetSketch (A3 + оба угла + A4-печать);
-2. аннотации на `02_кв1_5`;
-3. сначала модель/распознавание.
-
-Рекомендация: 1 → 2, затем 3.
+1. Реальный прогон распознавания на 9 эскизах (нужен настроенный
+   провайдер `NS_LLM_*`) и правка расхождений по
+   `python tools\recognize_check.py`.
+2. Довести лист `02_кв1_5` «один в один»: стыки трассы, символы КГЗ/КЭМ,
+   перехода и муфты, положение легенды и итога по абсолютным координатам.
 
 ## Как продолжить в новой сессии
 
-1. Прочитать `knowledge/style-observed.md` и `knowledge/gas-etalon-plan.md`.
+1. Прочитать `knowledge/gas-etalon-plan.md` (там статус фаз) и
+   `knowledge/style-observed.md`.
 2. Загрузить скилл `gost-drafting`.
-3. Проверить, что скрипт запускается:
-   `python skills\gost-drafting\scripts\gost_sheet.py --demo --out out\sheet --png`.
-4. Сказать ассистенту: «продолжаем по gas-etalon-plan.md, начинаем с фазы 1».
+3. Прогнать `python tools\gost_verify.py` и `python tools\smoke_test.py`.
+4. Сказать ассистенту: «продолжаем по gas-etalon-plan.md, начинаем фазу 3».

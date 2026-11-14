@@ -12,7 +12,9 @@ NetSketch: веб-приложение, которое строит DWG/PDF/PNG 
 $env:PYTHONPATH = "$PWD\.pydeps"
 $env:PYTHONIOENCODING = "utf-8"
 python -m netsketch doctor
-python tools\smoke_test.py          # ~1 мин, гоняет OCS
+python tools\smoke_test.py          # ~1 мин, гоняет OCS и режим schematic
+python tools\gost_verify.py         # лист ГОСТ: сетка/тексты/углы/печать vs эталон
+python tools\recognize_check.py --selftest   # приёмка распознавания (швы, шифр, итог)
 python tools\api_test.py http://127.0.0.1:8770
 ```
 
@@ -24,8 +26,10 @@ python -m pip install --target .pydeps -r requirements.txt
 
 ## Инварианты, которые нельзя ломать
 
-1. **Один источник геометрии.** `layout.build_scene()` → `Scene` в мм листа.
-   DXF и PDF/PNG строятся только из неё. Нельзя рисовать PDF «отдельно».
+1. **Один источник геометрии.** `layout.build_scene()` (план) или
+   `layout.build_schematic_scene()` (лист ГОСТ) → `Scene` в мм листа.
+   DXF и PDF/PNG строятся только из неё. Нельзя рисовать PDF «отдельно»;
+   печатный A4 — это тот же `Scene` после `gost_sheet.print_transform()`.
 2. **Единицы — миллиметры листа, 1:1.** Масштаб применяется при пересчёте
    пикселей эскиза, а не при печати.
 3. **Три состояния достоверности.** `CONFIRMED` / `DERIVED` / `ASSUMED`.
@@ -34,8 +38,10 @@ python -m pip install --target .pydeps -r requirements.txt
    Черчение — детерминированный код.
 5. **Труба не гнётся.** На листе только прямые участки и повороты 90°:
    `route.orthogonalize()` выполняется до раскладки, иначе рукописная дрожь
-   превращается в изогнутые трубы. Диагонали допустимы только для тепловых
-   трасс (режим `straight`).
+   превращается в изогнутые трубы. Скругление (отвод или гнутая труба) —
+   это тот же поворот 90°, нарисованный дугой малого радиуса:
+   `route.fillet_path(points, meta.fillet_mm)`. Диагонали допустимы только
+   для тепловых трасс (режим `straight`).
 6. **Ошибки не глотать.** Не удалось конвертировать DWG — задача `error` с
    текстом причины, а не «успех без файла».
 
@@ -45,10 +51,14 @@ python -m pip install --target .pydeps -r requirements.txt
 |---|---|
 | новый тип сети | `config.BUILTIN_NETWORK_TYPES`, `styles.NETWORK_LAYERS`, `knowledge/<тип>.md` |
 | новый символ | `symbols.draw_symbol`, `model.ELEMENT_TYPES` |
-| поле штампа / рамка | `sheets.py` |
-| масштаб и компоновка | `layout.py` (`_pick_scale`, `build_scene`) |
+| поле штампа / рамка (план) | `sheets.py` |
+| лист ГОСТ: сетка штампа, угол, A4-печать | `gost_sheet.py` |
+| аннотации схемы (швы, опоры, выноски, итог) | `annotations.py` |
+| масштаб и компоновка | `layout.py` (`build_scene`, `build_schematic_scene`) |
+| режим сборки (`plan`/`schematic`) | `build.py` (`resolve_mode`), `cli.py` (`--mode`) |
 | геометрия трассы (90°, диагонали) | `route.py` |
 | промпт распознавания | `prompts.py`, `knowledge/*.md` |
+| газовые схемы/планы по СПДС (ГОСТ 21.609, 21.710) | `skills/gost-gas-documentation/` |
 | HTTP-роуты | `server.py` |
 | интерфейс | `web/index.html`, `web/styles.css`, `web/app.js` |
 
@@ -72,6 +82,43 @@ python -m pip install --target .pydeps -r requirements.txt
 * **Повторное сохранение** в существующий DWG: файл удаляется перед
   конвертацией (иначе возможен диалог подтверждения).
 * **Кириллица в DXF** — стиль `NS_GOST` с Arial; `Ø` рендерится нормально.
+* **MULTILEADER в DXF от Open CAD Studio** — `entity.virtual_entities()`
+  отдаёт proxy graphic с неверным масштабом (выноски «уезжают» за лист);
+  реальную геометрию даёт
+  `ezdxf.render.mleader.virtual_entities(entity, proxy_graphic=False)`.
+* **Кегли подписей в DWG и на печати разные.** В эталонных DWG подписи
+  схемы нарисованы высотой ~2,23 мм, а на печатном PDF те же подписи
+  ≈4,26 мм (аннотативный масштаб ~1,9); легенда 4,49, итог 11,26.
+  Если нужен вид «как на печати», кегли берутся из PDF
+  (`model.meta.weld_height`, `callout_height`, `legend_height`,
+  `summary_height`), а размеры штрихов (6 мм шов, 4,8 опора) — из DWG 1:1.
+* **Скругление трубы рисуется одной полилинией.** Если рисовать дугу
+  скругления отдельным `Arc`, на стыке с прямолинейным участком появляются
+  ступеньки и «хорда» через поворот. `layout._draw_pipe_filleted` сэмплирует
+  дугу точками и отдаёт один `Polyline`; при сэмплировании дуга должна
+  начинаться со стороны текущей точки (обратный ход — отрицательным шагом).
+* **Символы с поворотом.** В `draw_symbol` поворот применяется через `rot()`
+  к КАЖДОЙ точке, иначе `rotation` молча игнорируется (так «краны» дважды
+  оказывались поперёк трубы). Базовое направление `valve`/`valve_ball` —
+  вдоль X, поэтому для вертикальной трубы нужен `rotation=90`.
+* **Точки на трубе.** Середины штрихов швов и крестиков опор в исходных DWG
+  смещены на 0,2–1,5 мм; перед черчением они проецируются на ось трубы
+  (`snap_to_pipe` в `to_model.py`).
+* **Выноски — настоящие MULTILEADER.** `scene.MLeader` → в DXF это
+  `MULTILEADER` (стиль `NS_MLEADER` в таблице `MLEADERSTYLES`), в PDF —
+  те же полки/ветки/стрелки. В CAD такая выноска правится одним объектом.
+  Создаётся через `msp.add_multileader_mtext(style)` + `build(insert=Vec2)`.
+* **Не глотать ошибки экспорта.** `scene_to_dxf` собирает неудачные
+  примитивы и падает `DxfExportError`, а не молча теряет их: именно
+  из-за `except: continue` MULTILEADER однажды исчезали из DWG целиком.
+* **Толщины линий — только из таблицы слоёв.** `styles.LAYER_LW` (собирается
+  из `LayerSpec`) — единственный источник и для DXF (BYLAYER), и для PDF
+  (`render.DEFAULT_LW`). Пока в рендере был свой словарь, PDF рисовал все
+  слои толщиной 0,25 и расходился с DWG. В схеме толщина трубы не зависит
+  от диаметра (`lw=None` → по слою).
+* **Кегли штампа на печати ×1,4** от высот DWG (аннотативный масштаб);
+  узкие графы 10 мм остаются как есть, иначе не влезают в ячейку
+  (`gost_sheet.STAMP_TEXT_SCALE`).
 * **Текст в matplotlib** шире, чем в Arial: при тесной компоновке проверять
   предпросмотр, а не только DWG.
 

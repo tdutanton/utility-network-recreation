@@ -1,4 +1,4 @@
-﻿"""Командная строка NetSketch.
+"""Командная строка NetSketch.
 
     python -m netsketch serve                 # веб-интерфейс
     python -m netsketch build model.json      # модель → DWG/PDF/PNG
@@ -31,6 +31,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 
 def cmd_build(args: argparse.Namespace) -> int:
+    from .gost_sheet import GostSheet
     from .model import load_model_file
 
     model, warnings = load_model_file(args.model)
@@ -39,19 +40,25 @@ def cmd_build(args: argparse.Namespace) -> int:
         for w in warnings:
             print("  -", w)
     title = model.title.__dict__.copy()
-    for key in ("project", "address", "organization", "developer", "checker"):
+    for key in ("project", "address", "organization", "developer", "checker", "cipher", "object", "drawing"):
         value = getattr(args, key, None)
         if value:
             title[key] = value
+    sheet = None
+    if args.stamp:
+        sheet = GostSheet("A3", "landscape", args.stamp)
     res = build_drawings(
         model,
         args.out,
         stem=args.stem or Path(args.model).stem,
         title=title,
+        sheet=sheet,
         scale=args.scale or None,
+        mode=args.mode,
         make_dwg=not args.no_dwg,
     )
     print(json.dumps({"files": res.files, "errors": res.errors, "scale": res.info.scale,
+                      "mode": res.info.mode, "stamp": res.info.stamp_corner,
                       "warnings": res.info.warnings}, ensure_ascii=False, indent=2))
     return 0 if not res.errors else 1
 
@@ -127,12 +134,19 @@ def main(argv: list[str] | None = None) -> int:
     p_build.add_argument("--out", default="output")
     p_build.add_argument("--stem", default="")
     p_build.add_argument("--scale", type=int, default=0)
+    p_build.add_argument("--mode", default="", choices=["", "plan", "schematic"],
+                         help="plan — план в масштабе, schematic — лист ГОСТ с штампом")
+    p_build.add_argument("--stamp", default="", choices=["", "left", "right", "auto"],
+                         help="угол штампа для schematic")
     p_build.add_argument("--no-dwg", action="store_true")
     p_build.add_argument("--project", default="")
     p_build.add_argument("--address", default="")
     p_build.add_argument("--organization", default="")
     p_build.add_argument("--developer", default="")
     p_build.add_argument("--checker", default="")
+    p_build.add_argument("--cipher", default="")
+    p_build.add_argument("--object", default="")
+    p_build.add_argument("--drawing", default="")
     p_build.set_defaults(func=cmd_build)
 
     p_rec = sub.add_parser("recognize", help="распознать эскиз в model.json")

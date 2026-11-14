@@ -282,6 +282,78 @@ def _iso_walk(points: list[Point], eps: float) -> list[Point]:
     return _merge_collinear(out)
 
 
+def fillet_path(
+    points: list[Point], radius: float, *, min_angle_deg: float = 20.0
+) -> list[tuple]:
+    """Скруглить повороты ломаной радиусом `radius` (мм листа).
+
+    Возвращает примитивы пути:
+      ("line", a, b)            — прямой участок;
+      ("arc", center, r, a0, a1) — скругление поворота.
+
+    Для газовых схем поворот — это отвод/гнутая труба на 90°; радиус
+    маленький (несколько мм на листе) и задаётся в мм листа, а не в
+    координатах эскиза. Если участок короче радиуса, скругление
+    ужимается, чтобы труба не «съела» сама себя.
+    """
+    pts = [p for p in points]
+    if radius <= 0 or len(pts) < 3:
+        return [("line", a, b) for a, b in zip(pts, pts[1:])]
+
+    # точки, где начинается и заканчивается скругление на каждом угле
+    trim_before: dict[int, Point] = {}
+    trim_after: dict[int, Point] = {}
+    arcs: dict[int, tuple] = {}
+
+    for i in range(1, len(pts) - 1):
+        a, b, c = pts[i - 1], pts[i], pts[i + 1]
+        l1, l2 = math.dist(a, b), math.dist(b, c)
+        if l1 < 1e-9 or l2 < 1e-9:
+            continue
+        u1 = ((a[0] - b[0]) / l1, (a[1] - b[1]) / l1)
+        u2 = ((c[0] - b[0]) / l2, (c[1] - b[1]) / l2)
+        cosang = max(-1.0, min(1.0, u1[0] * u2[0] + u1[1] * u2[1]))
+        angle = math.acos(cosang)
+        # почти разворот (угол ~0) или «шип» (угол ~180) не скругляем:
+        # труба так не гнётся, а дуга вышла бы почти полным кругом
+        if math.degrees(angle) < min_angle_deg or math.degrees(angle) > 160.0:
+            continue
+        d = radius / math.tan(angle / 2.0) if math.tan(angle / 2.0) > 1e-9 else radius
+        d = min(d, l1 * 0.49, l2 * 0.49)
+        r_eff = d * math.tan(angle / 2.0)
+        t1 = (b[0] + u1[0] * d, b[1] + u1[1] * d)
+        t2 = (b[0] + u2[0] * d, b[1] + u2[1] * d)
+        bx, by = u1[0] + u2[0], u1[1] + u2[1]
+        blen = math.hypot(bx, by)
+        if blen < 1e-9:
+            continue
+        dist_center = r_eff / math.sin(angle / 2.0) if math.sin(angle / 2.0) > 1e-9 else r_eff
+        center = (b[0] + bx / blen * dist_center, b[1] + by / blen * dist_center)
+        a0 = math.degrees(math.atan2(t1[1] - center[1], t1[0] - center[0]))
+        a1 = math.degrees(math.atan2(t2[1] - center[1], t2[0] - center[0]))
+        # DXF и matplotlib рисуют дугу против часовой от a0 к a1; если так
+        # получается «длинный путь» (>180°), меняем концы местами
+        if (a1 - a0) % 360 > 180:
+            a0, a1 = a1, a0
+        trim_before[i] = t1
+        trim_after[i] = t2
+        arcs[i] = (center, r_eff, a0, a1)
+
+    out: list[tuple] = []
+    cur = pts[0]
+    for i in range(1, len(pts)):
+        end = trim_before[i] if i in trim_before else pts[i]
+        if math.dist(cur, end) > 1e-9:
+            out.append(("line", cur, end))
+        if i in arcs:
+            center, r_eff, a0, a1 = arcs[i]
+            out.append(("arc", center, r_eff, a0, a1))
+            cur = trim_after[i]
+        else:
+            cur = pts[i]
+    return out
+
+
 def orthogonalize(model: Model, *, eps_ratio: float = 0.06, ratio: float = 0.10, deskew: bool = True) -> Model:
     """Возвращает копию модели с прямыми участками и углами 90°."""
     pts = [p for s in model.segments for p in s.points]

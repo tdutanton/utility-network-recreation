@@ -118,17 +118,25 @@ python tools\index_examples.py
 few-shot. Подробнее — `examples/README.md` и
 `skills/utility-network-drawing/references/examples-guide.md`.
 
-## Скилл для агентов (необязательно)
+## Скиллы для агентов (необязательно)
 
-Продукту скилл не нужен: правила живут в `knowledge/` и промптах, чертит код.
-Скилл нужен человеку или агенту, который будет проект дорабатывать либо
+Продукту скиллы не нужны: правила живут в `knowledge/` и промптах, чертит код.
+Скиллы нужны человеку или агенту, который будет проект дорабатывать либо
 разбирать эскизы вручную (режим «Нужно распознавание»).
 
-Лежит в `skills/utility-network-drawing/`. Чтобы он подхватывался
-автоматически в сессиях DSH, поставьте его в профиль:
+| Скилл | Зачем |
+|---|---|
+| `skills/utility-network-drawing/` | цикл «эскиз → model.json → DWG/PDF/PNG» |
+| `skills/gost-drafting/` | рамка, штамп 185×55, печать A4, аннотации исполнительной схемы |
+| `skills/gost-gas-documentation/` | СПДС: ГОСТ 21.609-2014 (внутренние системы) и ГОСТ 21.710-2021 (наружные сети) — обозначения, состав листа, примеры |
+
+Чтобы скиллы подхватывались автоматически в сессиях DSH, поставьте их в
+профиль:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\install_skill.ps1
+# только один скилл:
+powershell -File tools\install_skill.ps1 -Skill gost-gas-documentation
 # или ссылкой, чтобы правки в репозитории подхватывались сразу:
 powershell -File tools\install_skill.ps1 -Link
 ```
@@ -212,7 +220,7 @@ netsketch/
 web/             интерфейс (HTML/CSS/JS без сборки)
 knowledge/       общие правила, газ, тепло (идут в промпт и в документы)
 examples/        ваши пары «эскиз → DWG»
-skills/          скилл для агентов DSH
+skills/          скиллы для агентов DSH
 tools/           индексатор примеров, смоук-тест, API-тест, демо
 data/            задачи и результаты (в git не попадает)
 ```

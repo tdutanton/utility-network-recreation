@@ -9,8 +9,25 @@ import ezdxf
 from ezdxf import units
 from ezdxf.enums import TextEntityAlignment
 
-from .scene import Arc, Circle, DimLinear, Hatch, Insert, Line, Polyline, Prim, Scene, Solid, Text
-from .styles import DIM_STYLE, TEXT_STYLE, apply_to_dxf
+class DxfExportError(RuntimeError):
+    """Не удалось вывести сцену в DXF."""
+
+
+from .scene import (
+    Arc,
+    Circle,
+    DimLinear,
+    Hatch,
+    Insert,
+    Line,
+    MLeader,
+    Polyline,
+    Prim,
+    Scene,
+    Solid,
+    Text,
+)
+from .styles import DIM_STYLE, MLEADER_STYLE, TEXT_STYLE, apply_to_dxf
 
 _ALIGN = {
     ("left", "bottom"): TextEntityAlignment.LEFT,
@@ -63,13 +80,35 @@ def scene_to_dxf(scene: Scene, network_type: str, *, dxf_version: str = "R2018",
     apply_to_dxf(doc, network_type)
     msp = doc.modelspace()
 
+    failed: list[str] = []
     for prim in scene.prims:
         try:
             _add_prim(msp, prim)
-        except Exception:  # один битый примитив не должен ронять чертёж
-            continue
+        except Exception as exc:  # собираем, но не теряем молча
+            failed.append(f"{type(prim).__name__}: {type(exc).__name__}: {exc}")
+
+    if failed:
+        # битый примитив значит неполный чертёж — это ошибка, а не «мелочь»
+        raise DxfExportError(
+            f"не удалось вывести примитивов: {len(failed)}; первый: {failed[0]}"
+        )
 
     return doc
+
+
+def _add_mleader(msp, p: "MLeader", at: dict) -> None:
+    """Настоящий MULTILEADER: в CAD правится одним объектом (полка+текст+стрелки)."""
+    from ezdxf.math import Vec2
+    from ezdxf.render.mleader import ConnectionSide
+
+    builder = msp.add_multileader_mtext(MLEADER_STYLE, dxfattribs=at)
+    builder.set_content(p.text, char_height=max(p.height, 0.5))
+    side = ConnectionSide.right if p.side == "right" else ConnectionSide.left
+    for leader in p.leaders:
+        if len(leader) < 2:
+            continue
+        builder.add_leader_line(side, [Vec2(*q) for q in leader])
+    builder.build(insert=Vec2(*p.at))
 
 
 def _add_prim(msp, p: Prim) -> None:
@@ -102,7 +141,9 @@ def _add_prim(msp, p: Prim) -> None:
         hatch.paths.add_polyline_path(p.boundary, is_closed=True)
     elif isinstance(p, Text):
         attribs = dict(at)
-        attribs["style"] = "NS_BOLD" if p.bold else TEXT_STYLE
+        from .styles import text_style_for
+
+        attribs["style"] = text_style_for(bold=p.bold, serif=p.serif, italic=p.italic)
         attribs["rotation"] = p.rotation
         attribs["width"] = p.width_factor
         height = max(p.height, 0.5)
@@ -111,6 +152,8 @@ def _add_prim(msp, p: Prim) -> None:
         entity.set_placement(p.at, align=align)
     elif isinstance(p, Insert):
         msp.add_blockref(p.name, p.at, dxfattribs={**at, "rotation": p.rotation, "xscale": p.scale, "yscale": p.scale})
+    elif isinstance(p, MLeader):
+        _add_mleader(msp, p, at)
     elif isinstance(p, DimLinear):
         dim = msp.add_linear_dim(
             base=p.base or ((p.p1[0] + p.p2[0]) / 2, (p.p1[1] + p.p2[1]) / 2 - 8),

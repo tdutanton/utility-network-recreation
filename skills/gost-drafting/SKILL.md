@@ -20,8 +20,12 @@ description: Use when drawing or checking a GOST 2.104-2006 drawing sheet — fr
 |---|---|
 | Нужен чистый лист/шаблон, много вариантов | скрипт `scripts/gost_sheet.py` |
 | Чертёж уже открыт в Open CAD Studio | `mcp__ocs__*`, координаты из references |
-| Нужно встроить в NetSketch | перенести сетку из `references/observed-gas-template.md` в `sheets.py` |
+| Нужен лист внутри NetSketch | готово: `netsketch/gost_sheet.py` + `layout.build_schematic_scene`; проверить `python tools\gost_verify.py` |
 | Нужен готовый пример для глаз | `python scripts/gost_sheet.py --demo --out sheet --png --pdf` |
+
+В NetSketch шаблон уже перенесён (не переписывайте вручную): A3-альбом,
+оба угла, печать A4 через `print_transform()`. Скрипт ниже полезен для
+отдельных листов и для сверки с эталоном.
 
 ## Лист: база
 
@@ -213,3 +217,6 @@ python skills\gost-drafting\scripts\gost_sheet.py --fields fields.json --out out
   `examples/gas/1`: координаты, поля, углы, PDF-поворот, аннотации.
 * `references/annotations.md` — правила исполнительной схемы.
 * `scripts/gost_sheet.py` — генератор рамки/штампа (DXF/PDF/PNG/A4).
+* `skills/gost-gas-documentation/` — газовые схемы и планы по СПДС
+  (ГОСТ 21.609-2014 и 21.710-2021): обозначения `Г1…Г7`, содержание схемы,
+  масштабы, спецификация, разбор примеров из стандартов.

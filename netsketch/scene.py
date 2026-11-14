@@ -70,6 +70,8 @@ class Text(Prim):
     align: str = "left"  # left | center | right
     valign: str = "bottom"  # bottom | middle | top
     bold: bool = False
+    italic: bool = False
+    serif: bool = False  # антиква (Times) — итоговый блок эталонных схем
 
 
 @dataclass
@@ -78,6 +80,23 @@ class Insert(Prim):
     at: Point = (0.0, 0.0)
     rotation: float = 0.0
     scale: float = 1.0
+
+
+@dataclass
+class MLeader(Prim):
+    """Выноска как полноценный MULTILEADER (правится в CAD одним объектом).
+
+    `at` — точка вставки текста, `leaders` — ветки выноски: каждая ветка
+    это ломаная от полки до стрелки (последняя точка — острие).
+    В PDF/PNG рисуется теми же линиями и текстом, что и раньше.
+    """
+
+    text: str = ""
+    at: Point = (0.0, 0.0)
+    leaders: list[list[Point]] = field(default_factory=list)
+    height: float = 2.5
+    side: str = "left"  # с какой стороны текста крепится полка
+    arrow: bool = True  # рисовать стрелки на концах веток
 
 
 @dataclass
@@ -145,6 +164,11 @@ def _prim_points(p: Prim) -> list[Point]:
         return [(x, y), (x + w, y + p.height)]
     if isinstance(p, Insert):
         return [p.at]
+    if isinstance(p, MLeader):
+        points = [p.at]
+        for leader in p.leaders:
+            points.extend(leader)
+        return points
     if isinstance(p, DimLinear):
         return [p.p1, p.p2] + ([p.base] if p.base else [])
     return []

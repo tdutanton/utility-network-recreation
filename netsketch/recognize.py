@@ -23,6 +23,7 @@ from pathlib import Path
 
 from .config import Settings
 from .knowledge import few_shot, load_knowledge
+from .model import model_from_dict, normalize_recognized, validate_model
 from .prompts import build_system_prompt, build_user_prompt
 
 MAX_IMAGE_EDGE = 1600
@@ -150,6 +151,21 @@ def call_vision(
     return text, data
 
 
+def finalize(data: dict, network_type: str) -> tuple[dict, list[str]]:
+    """Нормализовать ответ модели и проверить его до черчения.
+
+    Возвращает данные с дополненным `warnings` и список предупреждений:
+    именно здесь отлавливаются потерянные суффиксы швов, `0` вместо `Ø`,
+    `СП`/`0П` вместо `СШ`/`ОП` и несходящийся итог длин.
+    """
+    data = normalize_recognized(data)
+    data["network_type"] = network_type
+    model, parse_warnings = model_from_dict(data)
+    warnings = list(dict.fromkeys(list(data.get("warnings") or []) + parse_warnings + validate_model(model)))
+    data["warnings"] = warnings
+    return data, warnings
+
+
 def recognize(
     *,
     settings: Settings,
@@ -169,7 +185,7 @@ def recognize(
         network_type=network_type,
         network_label=network_label,
         knowledge=knowledge,
-        few_shot=few_shot(settings, network_type, limit=1),
+        few_shot=few_shot(settings, network_type, limit=3),
     )
 
     prepared = []
@@ -195,12 +211,14 @@ def recognize(
 
     if settings.llm_command:
         data, raw = _run_command(settings, job_dir, network_type, system_prompt, user_prompt, images)
+        data, warnings = finalize(data, network_type)
         return RecognitionResult(
             data=data,
             raw=raw,
             provider="command",
             model=settings.llm_command,
             elapsed=time.time() - started,
+            warnings=warnings,
         )
 
     if not settings.llm_ready:
@@ -220,7 +238,7 @@ def recognize(
     data = extract_json(text)
     data.setdefault("image_width", first_w)
     data.setdefault("image_height", first_h)
-    data["network_type"] = network_type
+    data, warnings = finalize(data, network_type)
 
     return RecognitionResult(
         data=data,
@@ -228,6 +246,7 @@ def recognize(
         provider=settings.llm_provider,
         model=settings.llm_model,
         elapsed=time.time() - started,
+        warnings=warnings,
     )
 
 

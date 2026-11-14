@@ -1,4 +1,4 @@
-﻿"""Конфигурация приложения.
+"""Конфигурация приложения.
 
 Все настройки читаются из переменных окружения, при старте подхватывается
 файл `.env` рядом с корнем проекта. Никаких секретов в коде.
@@ -178,12 +178,20 @@ BUILTIN_NETWORK_TYPES: dict[str, dict[str, str]] = {
 }
 
 
+# Служебные документы в knowledge/: не являются типами сетей и не должны
+# попадать в список на форме.
+_KNOWLEDGE_DOCS = {"common", "readme", "index", "prompts", "template", "handoff"}
+
+
 def discover_network_types(knowledge_dir: Path) -> dict[str, dict[str, str]]:
     found = dict(BUILTIN_NETWORK_TYPES)
     if knowledge_dir.is_dir():
         for md in knowledge_dir.glob("*.md"):
             key = md.stem.lower()
-            if key in {"common", "readme", "index", "prompts", "template"} or key.startswith("style"):
+            if key in _KNOWLEDGE_DOCS or key.startswith("style"):
+                continue
+            # планы, схемы и отчёты — тоже документы, а не типы сетей
+            if key.endswith(("-plan", "-schema", "-report", "-observed")):
                 continue
             if key not in found:
                 found[key] = {

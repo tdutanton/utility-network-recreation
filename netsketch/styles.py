@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .gost_sheet import LAYER_FRAME, LAYER_PIPE, LAYER_STAMP
+
 # Стандартные значения толщин линий DXF (1/100 мм).
 LW_VALUES = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200]
 
@@ -24,6 +26,18 @@ class LayerSpec:
     printable: bool = True
 
 
+# Слои с именами из эталонных DWG (examples/gas/1): нужны, чтобы наши DWG
+# открывались в тех же шаблонах и слои не переименовывались.
+GOST_LAYERS = [
+    # Толщины сверены с печатным PDF эталона (мм на A3):
+    #   внешняя рамка 0,72 · внутренняя 0,42 · трубы 0,36 · тонкое 0,19
+    LayerSpec(LAYER_FRAME, 7, "CONTINUOUS", 0.7, "Рамка листа (имя слоя эталона)"),
+    LayerSpec(LAYER_STAMP, 7, "CONTINUOUS", 0.19, "Штамп и таблицы (имя слоя эталона)"),
+    LayerSpec(LAYER_PIPE, 7, "CONTINUOUS", 0.36, "Трубы (имя слоя эталона)"),
+    LayerSpec("SN", 7, "CONTINUOUS", 0.19, "Сварные швы (имя слоя эталона)"),
+    LayerSpec("BL", 7, "CONTINUOUS", 0.19, "Футляры и блоки (имя слоя эталона)"),
+]
+
 BASE_LAYERS = [
     LayerSpec("FRAME", 7, "CONTINUOUS", 0.6, "Рамка и основная надпись"),
     LayerSpec("TITLE", 7, "CONTINUOUS", 0.35, "Основная надпись"),
@@ -34,16 +48,16 @@ BASE_LAYERS = [
     LayerSpec("AXIS", 8, "CENTER", 0.18, "Осевые линии"),
     LayerSpec("ASSUMED", 6, "DASHED", 0.18, "Домысленные данные (ASSUMED)"),
     LayerSpec("HIDDEN", 8, "DASHED", 0.18, "Скрытые/подземные участки"),
-]
+] + GOST_LAYERS
 
 NETWORK_LAYERS: dict[str, list[LayerSpec]] = {
     "gas": [
-        LayerSpec("GAS_MAIN", 7, "CONTINUOUS", 0.5, "Газопровод — магистраль"),
-        LayerSpec("GAS_BRANCH", 7, "CONTINUOUS", 0.35, "Газопровод — ответвление"),
-        LayerSpec("GAS_INLET", 7, "DASHED", 0.35, "Ввод газопровода"),
-        LayerSpec("GAS_SLEEVE", 8, "DASHED", 0.25, "Футляр"),
-        LayerSpec("GAS_EQUIP", 7, "CONTINUOUS", 0.25, "Арматура и оборудование"),
-        LayerSpec("GAS_WELL", 7, "CONTINUOUS", 0.35, "Колодцы, коверы"),
+        LayerSpec("GAS_MAIN", 7, "CONTINUOUS", 0.36, "Газопровод — магистраль"),
+        LayerSpec("GAS_BRANCH", 7, "CONTINUOUS", 0.36, "Газопровод — ответвление"),
+        LayerSpec("GAS_INLET", 7, "DASHED", 0.36, "Ввод газопровода"),
+        LayerSpec("GAS_SLEEVE", 8, "DASHED", 0.19, "Футляр"),
+        LayerSpec("GAS_EQUIP", 7, "CONTINUOUS", 0.19, "Арматура и оборудование"),
+        LayerSpec("GAS_WELL", 7, "CONTINUOUS", 0.36, "Колодцы, коверы"),
         LayerSpec("GAS_LABEL", 7, "CONTINUOUS", 0.18, "Подписи диаметров"),
     ],
     "heat": [
@@ -67,7 +81,23 @@ DEFAULT_LAYERS: list[LayerSpec] = [
 TEXT_STYLE = "NS_GOST"
 TEXT_BOLD_STYLE = "NS_BOLD"
 TEXT_FONT = "Arial"
+# Итоговый блок эталонных схем — антиква: Times New Roman (курсив или прямой).
+TIMES_STYLE = "NS_TIMES"
+TIMES_ITALIC_STYLE = "NS_TIMES_ITALIC"
+TIMES_FONT = "times.ttf"
+TIMES_ITALIC_FONT = "timesi.ttf"
 DIM_STYLE = "NS_DIM"
+# Стиль выносок: MULTILEADER — полноценный объект, правится в CAD целиком
+MLEADER_STYLE = "NS_MLEADER"
+
+
+def text_style_for(*, bold: bool = False, serif: bool = False, italic: bool = False) -> str:
+    """Стиль DXF для примитива Text."""
+    if bold:
+        return TEXT_BOLD_STYLE
+    if serif:
+        return TIMES_ITALIC_STYLE if italic else TIMES_STYLE
+    return TEXT_STYLE
 
 
 def layers_for(network_type: str) -> list[LayerSpec]:
@@ -157,10 +187,29 @@ def apply_to_dxf(doc, network_type: str) -> None:
     if TEXT_BOLD_STYLE not in doc.styles:
         bold = doc.styles.add(TEXT_BOLD_STYLE, font=TEXT_FONT + " Bold")
         bold.dxf.width = 1.0
+    if TIMES_STYLE not in doc.styles:
+        times = doc.styles.add(TIMES_STYLE, font=TIMES_FONT)
+        times.dxf.width = 1.0
+    if TIMES_ITALIC_STYLE not in doc.styles:
+        times_it = doc.styles.add(TIMES_ITALIC_STYLE, font=TIMES_ITALIC_FONT)
+        times_it.dxf.width = 1.0
+
+    # стиль выносок: MULTILEADER ссылается на стиль по имени
+    if not doc.mleader_styles.has_entry(MLEADER_STYLE):
+        ml_style = doc.mleader_styles.new(MLEADER_STYLE)
+        ml_style.dxf.char_height = 4.26
+        ml_style.dxf.content_type = 2  # MTEXT
+        ml_style.dxf.text_style_handle = doc.styles.get(TEXT_STYLE).dxf.handle
+        ml_style.dxf.leader_lineweight = 18
 
     doc.header["$CLAYER"] = layers_for(network_type)[0].name if not network_type else layer_of(
         network_type, "main"
     )
+
+# Слой → толщина линии, мм. Один источник и для DXF (BYLAYER), и для PDF/PNG.
+LAYER_LW: dict[str, float] = {}
+for _spec in BASE_LAYERS + [l for ls in NETWORK_LAYERS.values() for l in ls] + DEFAULT_LAYERS:
+    LAYER_LW[_spec.name] = _spec.lw
 
 # Слой → тип линии (для рендера PDF/PNG, где DXF-типы линий не работают).
 LINETYPE_BY_LAYER: dict[str, str] = {}

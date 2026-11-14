@@ -1,4 +1,4 @@
-﻿"""Семантическая модель эскиза и её валидация.
+"""Семантическая модель эскиза и её валидация.
 
 Модель — единственный контракт между «пониманием» картинки и черчением.
 Её заполняет либо модель зрения (LLM), либо человек/агент вручную.
@@ -32,6 +32,8 @@ ELEMENT_TYPES: dict[str, str] = {
     "valve": "Задвижка",
     "valve_ball": "Кран шаровой",
     "gate_valve": "Задвижка",
+    "kgz": "КГЗ (клапан термозапорный)",
+    "kem": "КЭМ (клапан электромагнитный)",
     "filter": "Фильтр",
     "flowmeter": "Расходомер",
     "compensator": "Компенсатор",
@@ -41,6 +43,8 @@ ELEMENT_TYPES: dict[str, str] = {
     "sleeve": "Футляр",
     "hydrolock": "Гидрозатвор",
     "tee": "Тройник",
+    "fork": "Вилка (разделение на две ветки)",
+    "facade_link": "Фасадный газопровод (пунктир)",
     "cross": "Крестовина",
     "reducer": "Переход",
     "flange": "Фланец",
@@ -61,6 +65,11 @@ _ALIASES: dict[str, str] = {
     "кран": "valve_ball",
     "кран шаровой": "valve_ball",
     "шаровой кран": "valve_ball",
+    "кгз": "kgz",
+    "клапан термозапорный": "kgz",
+    "ктз": "kgz",
+    "кэм": "kem",
+    "клапан электромагнитный": "kem",
     "фильтр": "filter",
     "расходомер": "flowmeter",
     "компенсатор": "compensator",
@@ -73,6 +82,8 @@ _ALIASES: dict[str, str] = {
     "футляр": "sleeve",
     "гидрозатвор": "hydrolock",
     "тройник": "tee",
+    "вилка": "fork",
+    "развилка": "fork",
     "крестовина": "cross",
     "переход": "reducer",
     "фланец": "flange",
@@ -227,8 +238,68 @@ class Dimension:
 
 @dataclass
 class Callout:
-    n: int | str
+    """Выноска на полке: текст, куда указывает и с какой стороны стоит.
+
+    `targets` — одна или несколько точек: если их две (и больше), линия от
+    полки раздваивается (например «Кран Ø15» на оба крана после вилки).
+    """
+
+    n: int | str = ""
+    text: str = ""
+    x: float | None = None  # где стоит полка (левый край текста)
+    y: float | None = None
+    tx: float | None = None  # первая точка привязки (совместимость)
+    ty: float | None = None
+    targets: list[tuple[float, float]] = field(default_factory=list)
+    side: str = "left"  # left | right | up | down
+    fixed: bool = False  # не двигать авто-разводкой (место задал автор)
+    state: str = CONFIRMED
+
+
+@dataclass
+class Weld:
+    """Номер сварного шва: штрих поперёк трубы + номер рядом."""
+
+    id: str
+    x: float
+    y: float
+    angle: float = 45.0  # направление самого штриха, градусы
+    label_x: float | None = None  # где автор поставил номер (если задано)
+    label_y: float | None = None
+    state: str = CONFIRMED
+
+
+@dataclass
+class Support:
+    """Опора (узел крепления к стене) — крестик поперёк трубы."""
+
+    x: float
+    y: float
+    angle: float = 0.0  # направление трубы, чтобы крестик встал поперёк
+    state: str = CONFIRMED
+
+
+@dataclass
+class Chain:
+    """Размерная цепь: `СШ 1000`, `ОП 3000` или свободный размер."""
+
+    kind: str = "plain"  # weld (СШ) | support (ОП) | plain
+    points: list[tuple[float, float]] = field(default_factory=list)
+    values_mm: list[int] = field(default_factory=list)
+    offset_mm: float = 0.0
+    side: str = "auto"
+    state: str = CONFIRMED
+
+
+@dataclass
+class Room:
+    """Крупная подпись помещения/подъезда: `КВ. 5`, `1 под.`."""
+
     text: str
+    x: float
+    y: float
+    height: float = 3.8
+    state: str = CONFIRMED
 
 
 @dataclass
@@ -261,11 +332,19 @@ class TitleBlock:
     approver: str = ""
     date: str = ""
     doc_code: str = ""
+    # реквизиты ГОСТ-штампа исполнительной схемы (фаза 4)
+    cipher: str = ""  # шифр: 09/11ПР-2026-ИОС6
+    gip: str = ""
+    ncontrol: str = ""
+    city: str = ""
+    object_lines: list[str] = field(default_factory=list)  # объект, 2–3 строки
+    drawing: list[str] = field(default_factory=list)  # название чертежа, до 3 строк
 
 
 @dataclass
 class Model:
     network_type: str = "gas"
+    mode: str = "plan"  # plan | schematic
     sheet: str = "A4"
     orientation: str = "portrait"
     title: TitleBlock = field(default_factory=TitleBlock)
@@ -278,6 +357,11 @@ class Model:
     labels: list[Label] = field(default_factory=list)
     dimensions: list[Dimension] = field(default_factory=list)
     callouts: list[Callout] = field(default_factory=list)
+    welds: list[Weld] = field(default_factory=list)
+    supports: list[Support] = field(default_factory=list)
+    chains: list[Chain] = field(default_factory=list)
+    rooms: list[Room] = field(default_factory=list)
+    summary: list[str] = field(default_factory=list)
     legend: list[LegendItem] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     specification: list[SpecRow] = field(default_factory=list)
@@ -294,6 +378,19 @@ class Model:
             pts.append(n.xy)
         for e in self.elements:
             pts.append(e.xy)
+        for w in self.welds:
+            pts.append((w.x, w.y))
+        for s in self.supports:
+            pts.append((s.x, s.y))
+        for c in self.chains:
+            pts.extend(c.points)
+        for r in self.rooms:
+            pts.append((r.x, r.y))
+        for c in self.callouts:
+            if c.x is not None and c.y is not None:
+                pts.append((c.x, c.y))
+            if c.tx is not None and c.ty is not None:
+                pts.append((c.tx, c.ty))
         return pts
 
     def bbox(self) -> tuple[float, float, float, float] | None:
@@ -334,6 +431,7 @@ class Model:
         return {
             "schema_version": SCHEMA_VERSION,
             "network_type": self.network_type,
+            "mode": self.mode,
             "sheet": self.sheet,
             "orientation": self.orientation,
             "title": self.title.__dict__,
@@ -368,6 +466,21 @@ class Model:
                 for d in self.dimensions
             ],
             "callouts": [c.__dict__ for c in self.callouts],
+            "welds": [w.__dict__ for w in self.welds],
+            "supports": [s.__dict__ for s in self.supports],
+            "chains": [
+                {
+                    "kind": c.kind,
+                    "points": pts(c.points),
+                    "values_mm": c.values_mm,
+                    "offset_mm": c.offset_mm,
+                    "side": c.side,
+                    "state": c.state,
+                }
+                for c in self.chains
+            ],
+            "rooms": [r.__dict__ for r in self.rooms],
+            "summary": list(self.summary),
             "legend": [l.__dict__ for l in self.legend],
             "notes": self.notes,
             "specification": [r.__dict__ for r in self.specification],
@@ -398,12 +511,26 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
     m.image_height = int(_num(data.get("image_height"), 0) or 0)
     m.mm_per_px = _num(data.get("mm_per_px"))
     m.meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+    m.meta = dict(m.meta)
+    # `placement` может стоять и в корне — удобно для моделей, заданных
+    # прямо в мм листа (эталон, ручная доводка)
+    if data.get("placement") and "placement" not in m.meta:
+        m.meta["placement"] = str(data["placement"])
 
     title_raw = data.get("title") if isinstance(data.get("title"), dict) else {}
     tb = TitleBlock()
     for key in tb.__dict__:
-        if key in title_raw and title_raw[key] is not None:
-            setattr(tb, key, str(title_raw[key]))
+        if key not in title_raw or title_raw[key] is None:
+            continue
+        value = title_raw[key]
+        if isinstance(getattr(tb, key), list):
+            if isinstance(value, str):
+                value = [line for line in value.split("\n") if line.strip()]
+            else:
+                value = [str(v) for v in value if str(v).strip()]
+        else:
+            value = str(value)
+        setattr(tb, key, value)
     m.title = tb
 
     seen_nodes: dict[str, Node] = {}
@@ -511,15 +638,114 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
         )
 
     for raw in _iter_dicts(data.get("callouts")):
-        if raw.get("n") is None or raw.get("text") is None:
+        text = str(raw.get("text") or "").strip()
+        if not text:
             continue
-        m.callouts.append(Callout(n=raw.get("n"), text=str(raw.get("text"))))
+        targets = [p for p in (_point(v) for v in raw.get("targets") or []) if p]
+        target = _point(raw.get("target")) or _point({"x": raw.get("tx"), "y": raw.get("ty")})
+        if target:
+            targets.insert(0, target)
+        pos = _point(raw)
+        n = raw.get("n")
+        m.callouts.append(
+            Callout(
+                n="" if n is None else n,
+                text=text,
+                x=pos[0] if pos else None,
+                y=pos[1] if pos else None,
+                tx=targets[0][0] if targets else None,
+                ty=targets[0][1] if targets else None,
+                targets=targets,
+                side=str(raw.get("side") or "left").lower(),
+                fixed=bool(raw.get("fixed")),
+                state=_state(raw.get("state")),
+            )
+        )
+
+    for raw in _iter_dicts(data.get("welds")):
+        p = _point(raw)
+        wid = str(raw.get("id") or raw.get("n") or raw.get("number") or "").strip()
+        if not p or not wid:
+            continue
+        label = _point(raw.get("label"))
+        m.welds.append(
+            Weld(
+                id=wid,
+                x=p[0],
+                y=p[1],
+                angle=float(_num(raw.get("angle"), 45) or 45),
+                label_x=label[0] if label else _num(raw.get("label_x")),
+                label_y=label[1] if label else _num(raw.get("label_y")),
+                state=_state(raw.get("state")),
+            )
+        )
+
+    for raw in _iter_dicts(data.get("supports")):
+        p = _point(raw)
+        if not p:
+            continue
+        m.supports.append(
+            Support(
+                x=p[0],
+                y=p[1],
+                angle=float(_num(raw.get("angle") or raw.get("rotation"), 0) or 0),
+                state=_state(raw.get("state")),
+            )
+        )
+
+    for raw in _iter_dicts(data.get("chains")):
+        pts = [p for p in (_point(v) for v in raw.get("points") or []) if p]
+        if len(pts) < 2:
+            continue
+        kind = str(raw.get("kind") or raw.get("prefix") or "plain").lower()
+        if kind in {"сш", "weld", "svarka", "шов"}:
+            kind = "weld"
+        elif kind in {"оп", "support", "opora", "опора"}:
+            kind = "support"
+        m.chains.append(
+            Chain(
+                kind=kind,
+                points=pts,
+                values_mm=[int(_num(v, 0) or 0) for v in raw.get("values_mm") or raw.get("values") or []],
+                offset_mm=float(_num(raw.get("offset_mm"), 0) or 0),
+                side=str(raw.get("side") or "auto").lower(),
+                state=_state(raw.get("state")),
+            )
+        )
+
+    for raw in _iter_dicts(data.get("rooms")):
+        p = _point(raw)
+        text = str(raw.get("text") or "").strip()
+        if not p or not text:
+            continue
+        m.rooms.append(
+            Room(
+                text=text,
+                x=p[0],
+                y=p[1],
+                height=float(_num(raw.get("height"), 3.8) or 3.8),
+                state=_state(raw.get("state")),
+            )
+        )
+
+    # пустые строки сохраняем: в эталонном итоговом блоке они разделяют группы
+    raw_summary = data.get("summary") or []
+    if isinstance(raw_summary, str):
+        raw_summary = raw_summary.split("\n")
+    m.summary = [str(v).strip() for v in raw_summary if v is not None]
+    mode = str(data.get("mode") or "plan").lower()
+    m.mode = "schematic" if mode.startswith("schem") else "plan"
 
     for raw in _iter_dicts(data.get("legend")):
-        sym = str(raw.get("symbol") or raw.get("type") or "")
+        sym_raw = str(raw.get("symbol") or raw.get("type") or "").strip()
         text = str(raw.get("text") or raw.get("label") or "").strip()
-        if text:
-            m.legend.append(LegendItem(symbol=normalize_element_type(sym), text=text))
+        if not text:
+            continue
+        sym = normalize_element_type(sym_raw)
+        if sym == "unknown" and sym_raw:
+            # литеральный маркер эталонной легенды: «30», «×», «□»
+            sym = sym_raw
+        m.legend.append(LegendItem(symbol=sym, text=text))
 
     m.notes = [str(n).strip() for n in (data.get("notes") or []) if str(n).strip()]
     m.assumptions = [str(n).strip() for n in (data.get("assumptions") or []) if str(n).strip()]
@@ -548,4 +774,122 @@ def model_to_json(model: Model) -> str:
 def load_model_file(path: str) -> tuple[Model, list[str]]:
     with open(path, "r", encoding="utf-8-sig") as fh:
         return model_from_dict(json.load(fh))
+
+
+# ----------------------------------------------------------------------
+# Проверки распознанной модели (фаза 5): то, что чаще всего теряется
+# на рукописном эскизе.
+# ----------------------------------------------------------------------
+
+_WELD_ID = re.compile(r"^\d+(\.\d+)?$")
+_SUMMARY_ROW = re.compile(r"ст\.?\s*д\.?\s*(\d+)\s*l\s*=\s*([\d.,]+)\s*м", re.IGNORECASE)
+_SUMMARY_TOTAL = re.compile(r"(?:итого|всего|lобщ)[^\d\-]*([\d.,]+)\s*м", re.IGNORECASE)
+
+
+def _as_float(value: str) -> float | None:
+    try:
+        return float(value.replace(",", "."))
+    except (AttributeError, ValueError):
+        return None
+
+
+def normalize_recognized(data: dict) -> dict:
+    """Починить типовые огрехи модели зрения до разбора в Model."""
+    out = dict(data)
+    out.setdefault("schema_version", SCHEMA_VERSION)
+
+    welds = []
+    for raw in out.get("welds") or []:
+        if not isinstance(raw, dict):
+            continue
+        item = dict(raw)
+        wid = str(item.get("id") or item.get("number") or item.get("n") or "").strip()
+        # «2,1» из русского текста, «2 . 1», лишние пробелы
+        wid = wid.replace(",", ".").replace(" ", "").replace("–", "-")
+        if wid:
+            item["id"] = wid
+        welds.append(item)
+    if welds:
+        out["welds"] = welds
+
+    chains = []
+    for raw in out.get("chains") or []:
+        if not isinstance(raw, dict):
+            continue
+        item = dict(raw)
+        kind = str(item.get("kind") or item.get("prefix") or "").strip().lower()
+        # «СП»/«сш» — сварные швы, «0П»/«on» — опоры
+        if kind.replace("0", "о") in {"сш", "сп", "шов", "сварной"}:
+            item["kind"] = "weld"
+        elif kind.replace("0", "о") in {"оп", "опора", "on"}:
+            item["kind"] = "support"
+        chains.append(item)
+    if chains:
+        out["chains"] = chains
+
+    if not out.get("mode"):
+        out["mode"] = "schematic" if (out.get("welds") or out.get("supports") or out.get("summary")) else "plan"
+    return out
+
+
+def validate_model(model: Model) -> list[str]:
+    """Проверки модели перед черчением. Возвращает предупреждения.
+
+    Ловит типовые ошибки распознавания: потерянный суффикс шва, `Ø` вместо
+    `0`, `СП`/`0П` вместо `СШ`/`ОП`, выноску без привязки и несходящийся
+    итог длин.
+    """
+    warnings: list[str] = []
+
+    ids = [w.id for w in model.welds]
+    seen: set[str] = set()
+    for wid in ids:
+        if wid in seen:
+            warnings.append(f"номер шва {wid} повторяется")
+        seen.add(wid)
+        if not _WELD_ID.match(wid):
+            warnings.append(f"номер шва «{wid}» не похож на номер (ожидается 30 или 2.1)")
+
+    for c in model.chains:
+        if not isinstance(c, Chain):
+            continue
+        if c.kind in {"weld", "support"} and not c.values_mm:
+            warnings.append(f"цепь {c.kind}: нет значений в мм")
+        for value in c.values_mm:
+            if value and not (50 <= value <= 200000):
+                warnings.append(f"цепь {c.kind}: подозрительное значение {value} мм")
+
+    for co in model.callouts:
+        text = (co.text or "").strip()
+        if not text:
+            warnings.append("пустая выноска")
+            continue
+        if re.search(r"(^|[^\w])0[ПPп]\b|(^|[^\w])СП\b", text):
+            warnings.append(f"выноска «{text}»: похоже на 0П/СП вместо ОП/СШ")
+        if re.fullmatch(r"[0OОoо]\s?\d{1,3}", text):
+            warnings.append(f"выноска «{text}»: похоже на Ø, прочитанный как 0/О")
+        if co.tx is None and co.x is None:
+            warnings.append(f"выноска «{text}» без привязки (target)")
+
+    if model.summary:
+        rows = [v for line in model.summary for v in _SUMMARY_ROW.findall(line)]
+        total_match = None
+        for line in model.summary:
+            m = _SUMMARY_TOTAL.search(line)
+            if m:
+                total_match = _as_float(m.group(1))
+        if rows and total_match is not None:
+            s = sum(_as_float(v[1]) or 0.0 for v in rows)
+            if abs(s - total_match) > 0.15:
+                warnings.append(f"итог {total_match:g} м не сходится с суммой участков {s:.2f} м")
+
+    if model.mode == "schematic":
+        if not model.title.cipher:
+            warnings.append("не заполнен шифр в штампе (title.cipher)")
+        if not model.title.drawing:
+            warnings.append("не заполнено название чертежа (title.drawing)")
+        if model.welds and not model.legend:
+            warnings.append("есть швы, но нет легенды (номер шва / опора / футляр)")
+
+    return warnings
 

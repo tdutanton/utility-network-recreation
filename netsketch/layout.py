@@ -1,4 +1,4 @@
-﻿"""Раскладка: семантическая модель → сцена листа (мм).
+"""Раскладка: семантическая модель → сцена листа (мм).
 
 Здесь решается всё, что делает чертёж «как у человека»:
   * пересчёт пикселей эскиза в миллиметры и выбор масштаба;
@@ -13,7 +13,8 @@ import math
 from dataclasses import dataclass, field
 
 from .model import ASSUMED, ELEMENT_TYPES, Model, Segment
-from .scene import Circle, Line, Polyline, Prim, Scene, Solid, Text, text_width
+from .gost_sheet import STAMP_H, STAMP_W, GostSheet, StampFields, draw_sheet
+from .scene import Arc, Circle, Line, Polyline, Prim, Scene, Solid, Text, text_width
 from .sheets import Sheet
 from .styles import layer_of
 from .symbols import draw_symbol
@@ -23,7 +24,7 @@ SCALE_SERIES = [50, 100, 200, 250, 400, 500, 750, 1000, 1500, 2000, 2500, 5000]
 
 @dataclass
 class Transform:
-    scale: int
+    scale: float
     mm_per_px: float
     bbox: tuple[float, float, float, float]
     origin: tuple[float, float]
@@ -53,6 +54,33 @@ class Transform:
 
 
 @dataclass
+class IdentityTransform:
+    """Модель уже задана в мм листа — преобразование не нужно."""
+
+    scale: float = 1.0
+    mm_per_px: float = 1.0
+    bbox: tuple[float, float, float, float] = (0.0, 0.0, 1.0, 1.0)
+    origin: tuple[float, float] = (0.0, 0.0)
+
+    def pt(self, p: tuple[float, float]) -> tuple[float, float]:
+        return (float(p[0]), float(p[1]))
+
+    def length(self, px: float) -> float:
+        return float(px)
+
+    def diameter_lw(self, mm: int | None) -> float:
+        if not mm:
+            return 0.35
+        if mm <= 50:
+            return 0.35
+        if mm <= 150:
+            return 0.5
+        if mm <= 400:
+            return 0.7
+        return 0.9
+
+
+@dataclass
 class LayoutInfo:
     scale: int = 500
     mm_per_px: float = 1.0
@@ -62,6 +90,8 @@ class LayoutInfo:
     plan_bounds: tuple[float, float, float, float] | None = None
     has_dimensions: bool = False
     extra_notes: list[str] = field(default_factory=list)
+    mode: str = "plan"
+    stamp_corner: str = ""
 
 
 # ----------------------------------------------------------------------
@@ -172,6 +202,55 @@ def _draw_pipe(
         scene.add(Line(a=pts[0], b=pts[1], layer=layer, lw=lw, state=state))
     else:
         scene.add(Polyline(points=pts, layer=layer, lw=lw, state=state))
+
+
+def _draw_pipe_filleted(
+    scene: Scene,
+    pts: list[tuple[float, float]],
+    *,
+    layer: str,
+    lw: float,
+    state: str,
+    radius: float,
+) -> None:
+    """Труба со скруглёнными поворотами (гнутая труба / отвод).
+
+    Весь участок рисуется одной полилинией: дуги скругления сэмплируются
+    точками. Так не остаётся стыков «линия + дуга», из-за которых на
+    печати были видны ступеньки у поворотов.
+    """
+    from .route import fillet_path
+
+    points: list[tuple[float, float]] = []
+
+    def _arc_points(center, r, a0, a1, last):
+        def at(angle):
+            return (
+                center[0] + r * math.cos(math.radians(angle)),
+                center[1] + r * math.sin(math.radians(angle)),
+            )
+
+        sweep = (a1 - a0) % 360
+        # дуга должна начинаться с той стороны, где мы сейчас стоим,
+        # иначе полилиния «прыгнет» хордой через поворот; в обратную
+        # сторону идём отрицательным шагом (по часовой), а не длинным путём
+        if last is not None and math.dist(last, at(a1)) < math.dist(last, at(a0)):
+            a0, sweep = a1, -sweep
+        steps = max(4, int(abs(sweep) / 10) + 1)
+        return [at(a0 + sweep * i / steps) for i in range(steps + 1)]
+
+    for part in fillet_path(pts, radius):
+        if part[0] == "line":
+            segment = [part[1], part[2]]
+        else:
+            _, center, r, a0, a1 = part
+            segment = _arc_points(center, r, a0, a1, points[-1] if points else None)
+        for point in segment:
+            if not points or math.dist(point, points[-1]) > 1e-6:
+                points.append(point)
+    if len(points) < 2:
+        return
+    scene.add(Polyline(points=points, layer=layer, lw=lw, state=state))
 
 
 def _draw_ticks(scene: Scene, pts: list[tuple[float, float]], *, layer: str, lw: float, state: str, deg: dict) -> None:
@@ -415,6 +494,55 @@ def build_scene(
         (transform.bbox[0] + transform.bbox[2]) / 2,
         (transform.bbox[1] + transform.bbox[3]) / 2,
     )
+
+    _draw_network(scene, model, transform, plan, info, centroid_px)
+
+    # ---------------- рамка и штамп ----------------
+    scale_text = f"1:{transform.scale}"
+    sheet.draw(
+        scene,
+        title=title,
+        scale_text=scale_text,
+        doc_code=title.get("doc_code", ""),
+    )
+
+    # ---------------- правая колонка ----------------
+    if legend_width:
+        right_bottom = sheet.frame[1] + 4 if sheet.stamp == "vertical" else sheet.title_block[3] + 4
+        _draw_right_column(
+            scene,
+            model,
+            sheet,
+            x0=plan[2] + 4,
+            x1=sheet.frame[2] - 4,
+            y_top=sheet.frame[3] - 4,
+            y_bottom=right_bottom,
+            info=info,
+        )
+
+    # ---------------- домысленные данные ----------------
+    if info.assumed or model.assumptions:
+        model.assumptions = list(dict.fromkeys(model.assumptions + info.assumed))
+
+    return scene, info
+
+
+def _draw_network(
+    scene: Scene,
+    model: Model,
+    transform: Transform,
+    plan: tuple[float, float, float, float],
+    info: LayoutInfo,
+    centroid_px: tuple[float, float],
+    *,
+    mode: str = "plan",
+    fillet_mm: float = 0.0,
+) -> None:
+    """Трасса, арматура, размеры и подписи — без рамки и текстовых колонок.
+
+    Общая часть планового и схематичного режимов: рисует только сеть
+    внутри `plan`, чтобы компоновка листа решалась отдельно.
+    """
     deg = _node_degrees(model)
 
     # ---------------- трубопроводы ----------------
@@ -422,7 +550,9 @@ def build_scene(
     for seg in model.segments:
         pts = [transform.pt(p) for p in seg.points]
         layer = layer_of(model.network_type, seg.kind)
-        lw = transform.diameter_lw(seg.diameter_mm)
+        # в схеме толщина трубы одна и берётся из слоя (как в эталоне),
+        # в плане — зависит от диаметра
+        lw = None if mode == "schematic" else transform.diameter_lw(seg.diameter_mm)
         state = seg.state
         if model.network_type == "heat" and model.is_two_pipe() and seg.kind in {"main", "supply"}:
             scene.add(Polyline(points=pts, layer=layer_of(model.network_type, "supply"), lw=lw, state=state))
@@ -430,9 +560,12 @@ def build_scene(
             scene.add(
                 Polyline(points=back_pts, layer=layer_of(model.network_type, "return"), lw=lw, state=state)
             )
+        elif fillet_mm > 0:
+            _draw_pipe_filleted(scene, pts, layer=layer, lw=lw, state=state, radius=fillet_mm)
         else:
             _draw_pipe(scene, pts, layer=layer, lw=lw, state=state)
-        _draw_ticks(scene, pts, layer=layer, lw=lw, state=state, deg=deg)
+        if mode != "schematic":
+            _draw_ticks(scene, pts, layer=layer, lw=lw, state=state, deg=deg)
 
         # подпись диаметра — один раз на цепочку одинаковых диаметров,
         # и только если человек не подписал её сам
@@ -441,7 +574,7 @@ def build_scene(
             and prev_seg.diameter_mm == seg.diameter_mm
             and _shares_endpoint(prev_seg, seg)
         )
-        if seg.diameter_mm and not continues:
+        if seg.diameter_mm and not continues and mode != "schematic":
             mid = _midpoint(pts)
             label = f"Ø{seg.diameter_mm}"
             if model.network_type == "heat" and seg.length_mm:
@@ -459,11 +592,12 @@ def build_scene(
         prev_seg = seg
 
     # ---------------- узлы-соединения ----------------
-    for key, count in deg.items():
-        p = transform.pt(key)
-        if count >= 3:
-            scene.add(Circle(c=p, r=0.7, layer=layer_of(model.network_type, "equip"), lw=0.35))
-            info.drawn_elements += 1
+    if mode != "schematic":
+        for key, count in deg.items():
+            p = transform.pt(key)
+            if count >= 3:
+                scene.add(Circle(c=p, r=0.7, layer=layer_of(model.network_type, "equip"), lw=0.35))
+                info.drawn_elements += 1
 
     # ---------------- арматура и оборудование ----------------
     element_label_rects: list[tuple[float, float, float, float]] = []
@@ -520,37 +654,22 @@ def build_scene(
         )
 
     # ---------------- свободные подписи ----------------
-    route_pts = [transform.pt(p) for seg in model.segments for p in seg.points]
-    _place_labels(scene, model, transform, plan, route_pts, avoid=element_label_rects, info=info)
-
-    # ---------------- рамка и штамп ----------------
-    scale_text = f"1:{transform.scale}"
-    sheet.draw(
-        scene,
-        title=title,
-        scale_text=scale_text,
-        doc_code=title.get("doc_code", ""),
-    )
-
-    # ---------------- правая колонка ----------------
-    if legend_width:
-        right_bottom = sheet.frame[1] + 4 if sheet.stamp == "vertical" else sheet.title_block[3] + 4
-        _draw_right_column(
-            scene,
-            model,
-            sheet,
-            x0=plan[2] + 4,
-            x1=sheet.frame[2] - 4,
-            y_top=sheet.frame[3] - 4,
-            y_bottom=right_bottom,
-            info=info,
-        )
-
-    # ---------------- домысленные данные ----------------
-    if info.assumed or model.assumptions:
-        model.assumptions = list(dict.fromkeys(model.assumptions + info.assumed))
-
-    return scene, info
+    if mode == "schematic":
+        # в схеме подписи стоят там, где их поставил автор модели
+        for lbl in model.labels:
+            scene.add(
+                Text(
+                    text=lbl.text,
+                    at=transform.pt((lbl.x, lbl.y)),
+                    height=max(lbl.height, 2.0),
+                    rotation=lbl.rotation,
+                    layer=layer_of(model.network_type, "label"),
+                    state=lbl.state,
+                )
+            )
+    else:
+        route_pts = [transform.pt(p) for seg in model.segments for p in seg.points]
+        _place_labels(scene, model, transform, plan, route_pts, avoid=element_label_rects, info=info)
 
 
 def _shares_endpoint(a: Segment, b: Segment) -> bool:
@@ -704,6 +823,393 @@ def transform_length_m(seg: Segment, info: LayoutInfo, model: Model) -> float | 
     if not seg.length_px:
         return None
     return seg.length_px * info.mm_per_px / 1000.0
+
+
+# ----------------------------------------------------------------------
+# Схематичный режим: лист ГОСТ 2.104, A3-альбом, штамп 185×55
+# ----------------------------------------------------------------------
+#
+# Задача компоновки (фаза 2 плана): поставить штамп в свободный нижний угол,
+# легенду и итоговый блок — в свободную сторону, не допустить пересечений.
+# Эталон подсказывает правило: широкий чертёж (фасад) — штамп слева,
+# узкий квартирный — штамп справа и текстовая полоса справа над штампом.
+
+SCHEMATIC_MARGIN = 6.0
+SCHEMATIC_LEGEND_ROW = 6.2
+SCHEMATIC_SUMMARY_ROW = 5.0
+SCHEMATIC_SUMMARY_HEIGHT = 3.2
+SCHEMATIC_BAND_MIN = 96.0
+SCHEMATIC_BAND_MAX = 168.0
+SCHEMATIC_BLOCK_GAP = 6.0
+
+
+def _legend_rows(model: Model) -> list[tuple[str, str]]:
+    rows = [(item.symbol, item.text.strip()) for item in model.legend if item.text.strip()]
+    if not rows:
+        rows = [(t, ELEMENT_TYPES.get(t, t)) for t in model.used_element_types()]
+    return rows
+
+
+def _summary_lines(model: Model) -> list[str]:
+    explicit = [s for s in getattr(model, "summary", []) if s.strip()]
+    if explicit:
+        return explicit
+    notes = [n for n in model.notes if n.strip()]
+    if notes:
+        return notes
+    out: list[str] = []
+    for row in model.specification:
+        if row.length_m and row.diameter_mm:
+            out.append(f"ст.д.{row.diameter_mm} l= {row.length_m:g} м")
+        elif row.length_m and row.name:
+            out.append(f"{row.name} l= {row.length_m:g} м")
+    total = model.total_length_m()
+    if total:
+        out.append(f"lобщ= {total:g} м")
+    return out
+
+
+def _text_block_width(
+    legend_rows: list[tuple[str, str]], summary_lines: list[str], *, legend_h: float = 2.5, summary_h: float = 3.2
+) -> float:
+    legend_w = max((text_width(text, legend_h) for _, text in legend_rows), default=40.0) + 20.0
+    summary_w = max((text_width(text, summary_h) for text in summary_lines), default=40.0)
+    return min(max(legend_w, summary_w + 6.0, SCHEMATIC_BAND_MIN), SCHEMATIC_BAND_MAX)
+
+
+def _blocks_height(
+    legend_rows: list[tuple[str, str]], summary_lines: list[str], *, summary_row: float = SCHEMATIC_SUMMARY_ROW
+) -> float:
+    return (
+        (6.0 + len(legend_rows) * SCHEMATIC_LEGEND_ROW)
+        + SCHEMATIC_BLOCK_GAP
+        + (2.0 + len(summary_lines) * summary_row)
+    )
+
+
+def _draw_legend_block(
+    scene: Scene,
+    rows: list[tuple[str, str]],
+    x: float,
+    y_top: float,
+    *,
+    height: float = 2.5,
+    row: float | None = None,
+    marker_height: float | None = None,
+) -> float:
+    """Легенда без рамки: знак, тире, пояснение — как в эталоне.
+
+    Знак — либо условное обозначение (`support`, `sleeve`), либо литеральный
+    маркер эталонной легенды (`30` — образец номера шва, `□` — футляр).
+    """
+    y = y_top
+    step = row if row else max(SCHEMATIC_LEGEND_ROW, height * 2.0)
+    # знак в легенде эталона крупный: номер шва ~4,3 мм, крестик опоры ~6 мм
+    mh = max(marker_height or height, 4.2)
+    for marker, text in rows:
+        from .annotations import support_mark
+
+        if marker in {"×", "x", "X", "support"}:
+            # в эталонной легенде опора — крупный крестик (≈6 мм), а не знак «×»
+            support_mark(scene, (x + 3.2, y + mh * 0.4), 0.0, size=mh * 1.5)
+        elif marker in {"□", "▭", "sleeve"}:
+            # футляр — вытянутый прямоугольник (в эталоне ≈3,5 × 7 мм)
+            half_w, half_h = mh * 0.33, mh * 0.9
+            cx, cy = x + 3.2, y + mh * 0.45
+            scene.add(
+                Polyline(
+                    points=[
+                        (cx - half_w, cy - half_h),
+                        (cx + half_w, cy - half_h),
+                        (cx + half_w, cy + half_h),
+                        (cx - half_w, cy + half_h),
+                    ],
+                    closed=True,
+                    layer="LEGEND",
+                )
+            )
+        elif marker in ELEMENT_TYPES:
+            draw_symbol(scene, marker, (x + 3.4, y + mh * 0.25), size=mh, layer="LEGEND")
+        elif marker:
+            scene.add(Text(text=marker, at=(x + 1.6, y), height=mh, layer="LEGEND"))
+        scene.add(Text(text=f"- {text}", at=(x + 12.0, y), height=height, layer="LEGEND"))
+        y -= step
+    return y + step - 1.5
+
+
+def _draw_summary_block(
+    scene: Scene, lines: list[str], x: float, y_top: float, *, height: float = 3.2, row: float = 5.0
+) -> float:
+    """Итоговый блок крупным курсивом (Times New Roman Italic в эталоне)."""
+    y = y_top - height
+    for line in lines:
+        if not line.strip():
+            y -= row  # пустая строка = полный шаг, как в эталонном MTEXT
+            continue
+        scene.add(
+            Text(
+                text=line,
+                at=(x, y),
+                height=height,
+                layer="TEXT",
+                serif=True,
+                italic=True,
+            )
+        )
+        y -= row
+    return y
+
+
+def _fit_transform(model: Model, area: tuple[float, float, float, float]) -> tuple[Transform, LayoutInfo]:
+    """Вписать сеть в поле целиком (для схемы масштаб условный, ряд не нужен)."""
+    info = LayoutInfo()
+    bbox = model.bbox() or (0.0, 0.0, 100.0, 100.0)
+    mm_per_px, assumed = _estimate_mm_per_px(model)
+    info.mm_per_px = mm_per_px
+    if assumed:
+        msg = (
+            "Масштаб эскиза не подтверждён: нет калибровочного размера. "
+            "Принято, что эскиз покрывает ≈60 м, масштаб условный."
+        )
+        info.warnings.append(msg)
+        info.assumed.append(msg)
+
+    pad = 6.0
+    avail_w = max(area[2] - area[0] - 2 * pad, 20.0)
+    avail_h = max(area[3] - area[1] - 2 * pad, 20.0)
+    w_mm = max((bbox[2] - bbox[0]) * mm_per_px, 1e-6)
+    h_mm = max((bbox[3] - bbox[1]) * mm_per_px, 1e-6)
+    scale = max(w_mm / avail_w, h_mm / avail_h)
+
+    w = w_mm / scale
+    h = h_mm / scale
+    ox = area[0] + pad + max((avail_w - w) / 2, 0)
+    oy = area[1] + pad + max((avail_h - h) / 2, 0)
+    info.scale = int(round(scale))
+    info.plan_bounds = (ox, oy, ox + w, oy + h)
+    return Transform(scale=scale, mm_per_px=mm_per_px, bbox=bbox, origin=(ox, oy)), info
+
+
+def _rect_overlaps(a: tuple[float, ...], b: tuple[float, ...], pad: float = 0.0) -> bool:
+    return not (
+        a[2] + pad < b[0] or b[2] + pad < a[0] or a[3] + pad < b[1] or b[3] + pad < a[1]
+    )
+
+
+def _spot_fits(
+    rect: tuple[float, float, float, float],
+    drawn: tuple[float, float, float, float] | None,
+    frame: tuple[float, float, float, float],
+    pad: float = 3.0,
+) -> bool:
+    if rect[0] < frame[0] + pad or rect[1] < frame[1] + pad:
+        return False
+    if rect[2] > frame[2] - pad or rect[3] > frame[3] - pad:
+        return False
+    if drawn is not None and _rect_overlaps(rect, drawn, pad):
+        return False
+    return True
+
+
+def _text_spots(
+    frame: tuple[float, float, float, float],
+    corner: str,
+    band_w: float,
+    block_h: float,
+) -> list[tuple[float, float, float, float]]:
+    """Возможные места под легенду и итог, в порядке предпочтения.
+
+    Первым идёт угол, противоположный штампу: справа от штампа (штамп слева)
+    или верх правой полосы (штамп справа). Дальше — свободные полосы сверху.
+    """
+    x0, y0, x1, y1 = frame
+    m = SCHEMATIC_MARGIN
+    spots: list[tuple[float, float, float, float]] = []
+    if corner == "left":
+        strip = (x0 + STAMP_W + m, y0 + 4.0, x1 - m, y0 + STAMP_H - 1.0)
+        if strip[3] - strip[1] >= block_h:
+            spots.append(strip)
+    spots.append((x1 - band_w - m, y1 - m - block_h, x1 - m, y1 - m))
+    spots.append((x0 + m, y1 - m - block_h, x0 + m + band_w, y1 - m))
+    return spots
+
+
+def _pick_stamp_corner(model: Model) -> str:
+    """Широкий чертёж — штамп слева, узкий — справа (как в эталоне)."""
+    bbox = model.bbox()
+    if not bbox:
+        return "right"
+    w = max(bbox[2] - bbox[0], 1.0)
+    h = max(bbox[3] - bbox[1], 1.0)
+    return "left" if w / h >= 1.3 else "right"
+
+
+def build_schematic_scene(
+    model: Model,
+    *,
+    sheet: GostSheet | None = None,
+    fields: StampFields | None = None,
+    title: dict | None = None,
+    scale_override: int | None = None,
+) -> tuple[Scene, LayoutInfo]:
+    """Исполнительная схема на листе ГОСТ: рамка, штамп, свободная компоновка."""
+    gsheet = sheet or GostSheet("A3", "landscape", "auto")
+    if not gsheet.is_landscape:
+        gsheet = GostSheet(gsheet.format, "landscape", gsheet.stamp)
+    if gsheet.stamp == "auto":
+        gsheet.stamp = _pick_stamp_corner(model)
+
+    fields = fields or StampFields.from_title(title or model.title.__dict__)
+    legend_rows = _legend_rows(model)
+    summary_lines = _summary_lines(model)
+    meta = model.meta or {}
+    legend_h = float(meta.get("legend_height") or 2.5)
+    legend_row = meta.get("legend_row")
+    summary_h = float(meta.get("summary_height") or SCHEMATIC_SUMMARY_HEIGHT)
+    summary_row = float(meta.get("summary_row") or SCHEMATIC_SUMMARY_ROW)
+    legend_at = meta.get("legend_at")
+    summary_at = meta.get("summary_at")
+    band_w = _text_block_width(legend_rows, summary_lines, legend_h=legend_h, summary_h=summary_h)
+    block_h = _blocks_height(legend_rows, summary_lines, summary_row=summary_row)
+
+    frame = gsheet.frame
+    x0, y0, x1, y1 = frame
+    m = SCHEMATIC_MARGIN
+    stamp_top = y0 + STAMP_H
+
+    full_area = (x0 + m, stamp_top + m, x1 - m, y1 - m)
+    band_area = (x0 + m, stamp_top + m, x1 - band_w - m, y1 - m)
+
+    # Широкому чертежу сначала даём всю ширину; если текст некуда поставить —
+    # резервируем полосу справа и уменьшаем чертёж (правило плана).
+    attempts = [full_area] if gsheet.stamp == "left" else []
+    attempts.append(band_area)
+
+    last: tuple[Scene, LayoutInfo] | None = None
+    for area in attempts:
+        scene = Scene()
+        info = LayoutInfo(mode="schematic", stamp_corner=gsheet.stamp)
+        absolute = str(model.meta.get("placement") or "").lower() == "absolute"
+        if absolute:
+            # модель уже задана в мм листа (эталон, ручная доводка) — не двигаем
+            transform = IdentityTransform(scale=1.0, mm_per_px=1.0, bbox=model.bbox() or (0.0, 0.0, 1.0, 1.0))
+            tinfo = LayoutInfo(scale=1)
+        else:
+            transform, tinfo = _fit_transform(model, area)
+        info.warnings.extend(tinfo.warnings)
+        info.assumed.extend(tinfo.assumed)
+        if scale_override:
+            transform.scale = scale_override
+            info.scale = scale_override
+        info.mm_per_px = transform.mm_per_px
+        info.scale = tinfo.scale if not scale_override else scale_override
+        info.plan_bounds = tinfo.plan_bounds
+
+        centroid_px = (
+            (transform.bbox[0] + transform.bbox[2]) / 2,
+            (transform.bbox[1] + transform.bbox[3]) / 2,
+        )
+        _draw_network(
+            scene,
+            model,
+            transform,
+            area,
+            info,
+            centroid_px,
+            mode="schematic",
+            fillet_mm=float(model.meta.get("fillet_mm") or 0.0),
+        )
+        drawn = scene.bbox()
+
+        # аннотации исполнительной схемы: швы, опоры, выноски, квартиры, цепи
+        from .annotations import draw_model_annotations
+
+        draw_model_annotations(scene, model, transform)
+        drawn_all = scene.bbox()
+
+        spot = None
+        if not (absolute and (legend_at or summary_at)):
+            spot = next(
+                (s for s in _text_spots(frame, gsheet.stamp, band_w, block_h) if _spot_fits(s, drawn_all, frame)),
+                None,
+            )
+        if spot is None and not (absolute and (legend_at or summary_at)):
+            last = (scene, info)
+            continue
+
+        # блоки текста: по абсолютным координатам модели, иначе — в свободной полосе
+        if legend_at:
+            _draw_legend_block(
+                scene,
+                legend_rows,
+                float(legend_at[0]),
+                float(legend_at[1]),
+                height=legend_h,
+                row=float(legend_row) if legend_row else None,
+                marker_height=float(meta["legend_marker_height"]) if meta.get("legend_marker_height") else None,
+            )
+        if summary_at:
+            _draw_summary_block(
+                scene,
+                summary_lines,
+                float(summary_at[0]),
+                float(summary_at[1]),
+                height=summary_h,
+                row=summary_row,
+            )
+        if spot is not None:
+            y_top = spot[3] - 1.0
+            bottom = _draw_legend_block(
+                scene,
+                legend_rows,
+                spot[0] + 2.0,
+                y_top,
+                height=legend_h,
+                row=float(legend_row) if legend_row else None,
+                marker_height=float(meta["legend_marker_height"]) if meta.get("legend_marker_height") else None,
+            )
+            _draw_summary_block(
+                scene,
+                summary_lines,
+                spot[0] + 2.0,
+                bottom - SCHEMATIC_BLOCK_GAP,
+                height=summary_h,
+                row=summary_row,
+            )
+
+        draw_sheet(scene, gsheet, fields)
+        _note_assumed(scene, model, info, frame, gsheet)
+        if info.assumed or model.assumptions:
+            model.assumptions = list(dict.fromkeys(model.assumptions + info.assumed))
+        return scene, info
+
+    # текст поместился только за счёт полосы — берём последнюю попытку
+    scene, info = last  # type: ignore[misc]
+    info.warnings.append("Легенда и итоговый блок не поместились в свободное поле — проверьте лист.")
+    draw_sheet(scene, gsheet, fields)
+    if info.assumed or model.assumptions:
+        model.assumptions = list(dict.fromkeys(model.assumptions + info.assumed))
+    return scene, info
+
+
+def _note_assumed(
+    scene: Scene,
+    model: Model,
+    info: LayoutInfo,
+    frame: tuple[float, float, float, float],
+    gsheet: GostSheet,
+) -> None:
+    """Пометка о домысленных данных — мелким текстом у нижней линии рамки."""
+    if not info.assumed:
+        return
+    scene.add(
+        Text(
+            text="ASSUMED — данные требуют подтверждения",
+            at=(frame[0] + 2.0, frame[1] + 2.0),
+            height=2.0,
+            layer="ASSUMED",
+        )
+    )
 
 
 def _fit_text(value: str, width_mm: float, height: float) -> str:

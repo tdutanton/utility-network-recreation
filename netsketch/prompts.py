@@ -1,17 +1,21 @@
-﻿"""Сборка промптов для распознавания эскиза."""
+"""Сборка промптов для распознавания эскиза."""
 
 from __future__ import annotations
 
 import json
 
 SCHEMA_HINT = """{
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "network_type": "gas" | "heat",
+  "mode": "plan" | "schematic",
   "sheet": "A4" | "A3" | "A2" | "A1",
   "orientation": "landscape" | "portrait",
   "image_width": 0, "image_height": 0,
   "mm_per_px": 0.0,
-  "title": {"project": "", "address": "", "drawing_name": "", "stage": "Р", "sheet": "1", "total": "1"},
+  "title": {"project": "", "address": "", "drawing_name": "", "stage": "Р", "sheet": "1", "total": "1",
+            "cipher": "", "gip": "", "ncontrol": "", "city": "",
+            "object": ["строка объекта 1", "строка 2"],
+            "drawing": ["Исполнительная схема.", "Схема сварных соединений.", "Наружные газопроводы"]},
   "nodes": [{"id": "n1", "x": 0, "y": 0, "label": ""}],
   "segments": [{"id": "s1", "points": [[x, y], [x, y]], "diameter_mm": 0,
                 "kind": "main|branch|inlet|outlet|crossing", "material": "",
@@ -21,13 +25,58 @@ SCHEMA_HINT = """{
                 "state": "CONFIRMED"}],
   "dimensions": [{"id": "d1", "points": [[x, y], [x, y]], "values_mm": [0], "offset_mm": 10}],
   "labels": [{"text": "Ø25", "x": 0, "y": 0, "role": "diameter|length|elevation|note|callout"}],
-  "callouts": [{"n": 1, "text": "фильтр"}],
-  "legend": [{"symbol": "filter", "text": "фильтр"}],
+  "welds": [{"id": "2.1", "x": 0, "y": 0, "angle": 50, "label": [0, 0]}],
+  "supports": [{"x": 0, "y": 0, "angle": 0}],
+  "chains": [{"kind": "weld|support|plain", "points": [[x, y], [x, y]], "values_mm": [1000]}],
+  "callouts": [{"text": "Отвод Ø25", "target": [0, 0], "x": 0, "y": 0, "side": "left|right|up|down"}],
+  "rooms": [{"text": "КВ. 5", "x": 0, "y": 0, "height": 3.8}],
+  "summary": ["Наружный газ-д", "ст.д.25 l= 2,5 м", "Итого 9,2 м"],
+  "legend": [{"symbol": "30", "text": "номер сварного шва"}],
   "notes": ["текст примечания"],
   "specification": [{"diameter_mm": 57, "length_m": 64.0, "count": 1}],
   "assumptions": ["что домыслено и почему"],
   "warnings": ["что не удалось прочитать"]
 }"""
+
+SCHEMATIC_RULES = """Если эскиз — исполнительная схема (стадия ИД), заполняй блок
+исполнительной схемы, а не только трассу:
+
+1. **Номера швов** → welds[].id, ровно как написано: `30`, `2.1`, `2.17`.
+   Суффикс `.1`, `.2` — ветки того же шва; НЕ теряй его и не превращай
+   `2.1` в `21` или `2`. Координаты — середина штриха шва; если видно,
+   куда поставлен номер, добавь `label`: [x, y].
+2. **Опоры** (`×` поперёк трубы, узел крепления к стене) → supports[].
+3. **Размерные цепи**: `СШ 1000` — расстояние между сварными швами,
+   `ОП 3000` — между опорами → chains[] с kind `weld`/`support` и
+   values_mm в миллиметрах. Префиксы пишутся `СШ` и `ОП` (не `СП`/`0П`).
+   Цепь — НЕ второй трубопровод: не добавляй её в segments.
+4. **Выноски на полке** → callouts[]: text как на эскизе (`Отвод Ø25`,
+   `Переход Ø25/20`, `Кран Ø15`, `КИП Ø25`, `КГЗ Ø20`, `КЭМ Ø20`),
+   `target` — точка на трубе/символе, `x`/`y` — конец полки, `side` —
+   куда уходит текст.
+5. **Помещения/подъезды** (`КВ. 5`, `КВ. 1`, `1 под.`) → rooms[].
+6. **Итог** → summary[]: строки как на эскизе (`Наружный газ-д`,
+   `ст.д.25 l= 3,5 м`, `Внутренний газ-д`, `Итого 9,2 м`), тот же порядок.
+   Сумма строк `ст.д.` должна сходиться с «Итого».
+7. **Реквизиты штампа** → title: `cipher` (шифр, например
+   `09/11ПР-2026-ИОС6`), `address`, `object` (2–3 строки), `organization`,
+   `city`, `developer`, `date`, `stage` (`ИД`), `sheet`/`total`,
+   `drawing` (3 строки названия чертежа).
+8. `mode` = `schematic`; `legend` — строки «30 — номер сварного шва»,
+   «× — опора (узел крепления к стене)», «□ — футляр» (symbol — то, что
+   нарисовано слева: `30`, `×`, `□` или тип элемента).
+
+Обозначения по СПДС (ГОСТ 21.609-2014, внутренние системы):
+`Г1` — до 0,005 МПа, `Г2` — до 0,3 МПа, `Г3` — до 0,6 МПа, `Г4` — до
+1,2 МПа, `Г5` — продувочный, `Г6` — разрежение, `Г7` — безопасности;
+стояки `Ст1`, установки `1Г3`, элементы `1Г3.1`. `Ду` — условный проход,
+`Ø` — наружный диаметр; `Ø159×4` — наружный 159 со стенкой 4 мм
+(в diameter_mm — 159, стенку — в note). Наименование схемы —
+«Схема газоснабжения», а не «схема газопровода».
+
+Частые ошибки, которых нельзя допускать: `Ø` вместо `0` и наоборот;
+`СШ` вместо `СП`; `ОП` вместо `0П`; потерянный суффикс шва; размерная
+цепь, принятая за трубу; две параллельные нитки, склеенные в одну."""
 
 SYSTEM_TEMPLATE = """Ты — инженер-проектировщик наружных сетей. Тебе дают фотографию
 рукописного эскиза ({network_label}). Твоя задача — не «описать картинку», а
@@ -78,6 +127,7 @@ def build_system_prompt(
     network_label: str,
     knowledge: dict,
     few_shot: list[dict] | None = None,
+    schematic: bool = True,
 ) -> str:
     network_knowledge = "\n\n".join(
         part for part in (knowledge.get("common", ""), knowledge.get("network", ""), knowledge.get("observed", "")) if part
@@ -89,6 +139,8 @@ def build_system_prompt(
         network_knowledge=network_knowledge,
         style_profile=style_profile,
     )
+    if schematic:
+        prompt += "\n\n" + SCHEMATIC_RULES
     if few_shot:
         chunks = []
         for item in few_shot:
@@ -120,6 +172,31 @@ def build_user_prompt(
 
 
 def _trim_model(data: dict) -> dict:
-    keep = ("network_type", "title", "nodes", "segments", "elements", "legend", "notes", "specification")
-    return {k: data.get(k) for k in keep if k in data}
+    """Фрагмент модели для few-shot: только структура, без координат-простыней."""
+    keep = (
+        "network_type",
+        "mode",
+        "title",
+        "segments",
+        "elements",
+        "welds",
+        "supports",
+        "chains",
+        "callouts",
+        "rooms",
+        "summary",
+        "legend",
+        "notes",
+        "specification",
+    )
+    out: dict = {}
+    for key in keep:
+        if key not in data:
+            continue
+        value = data[key]
+        if isinstance(value, list):
+            out[key] = value[:6]
+        else:
+            out[key] = value
+    return out
 

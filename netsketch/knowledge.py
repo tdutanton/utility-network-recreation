@@ -75,7 +75,12 @@ def few_shot(settings: Settings, network_type: str, limit: int = 2) -> list[dict
 
     net_dir = settings.examples_dir / network_type
     if net_dir.is_dir():
-        for path in sorted(net_dir.glob("*/models/*.json")):
+        # схемы полезнее планов как пример: там есть швы, опоры и выноски
+        paths = sorted(
+            net_dir.glob("*/models/*.json"),
+            key=lambda p: (0 if "schematic" in p.stem else 1, p.name),
+        )
+        for path in paths:
             if str(path) in seen:
                 continue
             try:
