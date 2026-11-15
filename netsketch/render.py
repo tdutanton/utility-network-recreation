@@ -256,7 +256,7 @@ def _draw(ax, p: Prim, P: Transform | None = None, k: float = 1.0, rotation_delt
             fontsize=max(p.height * MM_TO_PT * k, 0.8),
             color=color,
             ha="left",
-            va="bottom",
+            va={"bottom": "bottom", "middle": "center", "top": "top"}.get(p.valign, "bottom"),
             rotation=rotation_delta,
             rotation_mode="anchor",
             family=_font_family(False),

@@ -47,6 +47,7 @@ ELEMENT_TYPES: dict[str, str] = {
     "facade_link": "Фасадный газопровод (пунктир)",
     "cross": "Крестовина",
     "reducer": "Переход",
+    "stub": "Заглушка",
     "flange": "Фланец",
     "coupling": "Муфта",
     "insulation_end": "Концевая изоляция",
@@ -253,6 +254,9 @@ class Callout:
     targets: list[tuple[float, float]] = field(default_factory=list)
     side: str = "left"  # left | right | up | down
     fixed: bool = False  # не двигать авто-разводкой (место задал автор)
+    # у `fixed`-выноски (x, y) — не полка, а ВЕРХНИЙ угол текста (как insert
+    # MULTILEADER в эталонном DWG); `align` — к какому краю прижат текст.
+    align: str = ""  # left | right | "" (взять из side)
     state: str = CONFIRMED
 
 
@@ -266,6 +270,9 @@ class Weld:
     angle: float = 45.0  # направление самого штриха, градусы
     label_x: float | None = None  # где автор поставил номер (если задано)
     label_y: float | None = None
+    # "" — номер ставится по нормали (старые модели); "left"/"right" — номер
+    # привязан к ВЕРХНЕМУ углу текста, как insert MULTILEADER в эталонном DWG
+    label_align: str = ""
     state: str = CONFIRMED
 
 
@@ -288,6 +295,9 @@ class Chain:
     values_mm: list[int] = field(default_factory=list)
     offset_mm: float = 0.0
     side: str = "auto"
+    # куда автор поставил подпись (DIMENSION text_midpoint, мм листа);
+    # None — считать середину отрезка
+    text_at: tuple[float, float] | None = None
     state: str = CONFIRMED
 
 
@@ -299,6 +309,12 @@ class Room:
     x: float
     y: float
     height: float = 3.8
+    frame: bool = False  # в изометрии подпись квартиры обводят рамкой
+    # "" — (x, y) это левый низ текста (старые модели); "left"/"right" —
+    # (x, y) верхний угол, как insert MULTILEADER в эталонном DWG
+    label_align: str = ""
+    # выноска от подписи к опуску (в эталоне подпись соединена с трубой)
+    leader: list[tuple[float, float]] = field(default_factory=list)
     state: str = CONFIRMED
 
 
@@ -344,7 +360,7 @@ class TitleBlock:
 @dataclass
 class Model:
     network_type: str = "gas"
-    mode: str = "plan"  # plan | schematic
+    mode: str = "plan"  # plan | schematic | iso (аксонометрия фасада)
     sheet: str = "A4"
     orientation: str = "portrait"
     title: TitleBlock = field(default_factory=TitleBlock)
@@ -658,6 +674,7 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
                 targets=targets,
                 side=str(raw.get("side") or "left").lower(),
                 fixed=bool(raw.get("fixed")),
+                align=str(raw.get("align") or "").lower(),
                 state=_state(raw.get("state")),
             )
         )
@@ -676,6 +693,7 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
                 angle=float(_num(raw.get("angle"), 45) or 45),
                 label_x=label[0] if label else _num(raw.get("label_x")),
                 label_y=label[1] if label else _num(raw.get("label_y")),
+                label_align=str(raw.get("label_align") or raw.get("align") or "").lower(),
                 state=_state(raw.get("state")),
             )
         )
@@ -709,6 +727,7 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
                 values_mm=[int(_num(v, 0) or 0) for v in raw.get("values_mm") or raw.get("values") or []],
                 offset_mm=float(_num(raw.get("offset_mm"), 0) or 0),
                 side=str(raw.get("side") or "auto").lower(),
+                text_at=_point(raw.get("text_at")) or _point(raw.get("text")),
                 state=_state(raw.get("state")),
             )
         )
@@ -724,6 +743,8 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
                 x=p[0],
                 y=p[1],
                 height=float(_num(raw.get("height"), 3.8) or 3.8),
+                label_align=str(raw.get("label_align") or raw.get("align") or "").lower(),
+                leader=[q for q in (_point(v) for v in raw.get("leader") or []) if q],
                 state=_state(raw.get("state")),
             )
         )
@@ -734,14 +755,21 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
         raw_summary = raw_summary.split("\n")
     m.summary = [str(v).strip() for v in raw_summary if v is not None]
     mode = str(data.get("mode") or "plan").lower()
-    m.mode = "schematic" if mode.startswith("schem") else "plan"
+    if mode.startswith(("iso", "axon")):
+        # аксонометрия/изометрия фасада: диагонали разрешены, координаты
+        # обычно уже в мм листа
+        m.mode = "iso"
+    elif mode.startswith("schem"):
+        m.mode = "schematic"
+    else:
+        m.mode = "plan"
 
     for raw in _iter_dicts(data.get("legend")):
         sym_raw = str(raw.get("symbol") or raw.get("type") or "").strip()
         text = str(raw.get("text") or raw.get("label") or "").strip()
         if not text:
             continue
-        sym = normalize_element_type(sym_raw)
+        sym = normalize_element_type(sym_raw) if sym_raw else ""
         if sym == "unknown" and sym_raw:
             # литеральный маркер эталонной легенды: «30», «×», «□»
             sym = sym_raw
@@ -781,7 +809,7 @@ def load_model_file(path: str) -> tuple[Model, list[str]]:
 # на рукописном эскизе.
 # ----------------------------------------------------------------------
 
-_WELD_ID = re.compile(r"^\d+(\.\d+)?$")
+_WELD_ID = re.compile(r"^\d+(\.\d+)?[А-ЯA-Z]?$")
 _SUMMARY_ROW = re.compile(r"ст\.?\s*д\.?\s*(\d+)\s*l\s*=\s*([\d.,]+)\s*м", re.IGNORECASE)
 _SUMMARY_TOTAL = re.compile(r"(?:итого|всего|lобщ)[^\d\-]*([\d.,]+)\s*м", re.IGNORECASE)
 
@@ -827,7 +855,12 @@ def normalize_recognized(data: dict) -> dict:
     if chains:
         out["chains"] = chains
 
-    if not out.get("mode"):
+    mode = str(out.get("mode") or "").strip().lower()
+    if mode.startswith(("iso", "axon", "аксон", "изом")):
+        out["mode"] = "iso"
+    elif mode:
+        out["mode"] = mode
+    elif not out.get("mode"):
         out["mode"] = "schematic" if (out.get("welds") or out.get("supports") or out.get("summary")) else "plan"
     return out
 
@@ -891,5 +924,68 @@ def validate_model(model: Model) -> list[str]:
         if model.welds and not model.legend:
             warnings.append("есть швы, но нет легенды (номер шва / опора / футляр)")
 
+    if model.mode == "iso":
+        warnings.extend(_validate_iso(model))
+
+    return warnings
+
+
+def _validate_iso(model: Model) -> list[str]:
+    """Проверки аксонометрии: диагонали, привязка к трубе, абсолютные мм.
+
+    На изометрическом листе труба — ломаная по осям 0°/±30°/90°, поэтому
+    «все участки ортогональны» — признак того, что лист прочитан как план.
+    Швы и опоры обязаны стоять на оси трубы (иначе они «висят», как было
+    с номерами швов на 10 мм выше трубы).
+    """
+    warnings: list[str] = []
+    if not model.segments:
+        return warnings
+    if str(model.meta.get("placement") or "").lower() != "absolute":
+        warnings.append("iso: placement не absolute — координаты аксонометрии обычно уже в мм листа")
+
+    def _nearest_axis(angle: float) -> tuple[float, float]:
+        """(ближайшая ось 0/±30/90, отклонение от неё в градусах)."""
+        a = abs(((angle + 90.0) % 180.0) - 90.0)
+        axis = min((0.0, 30.0, 90.0), key=lambda t: abs(a - t))
+        return axis, abs(a - axis)
+
+    diagonal = 0
+    for seg in model.segments:
+        for a, b in zip(seg.points, seg.points[1:]):
+            # стыки между линиями трубы в DWG дают «заусенцы» по 1–2 мм под
+            # случайным углом — это не участок трассы, их не проверяем
+            if math.dist(a, b) < 3.0:
+                continue
+            ang = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
+            axis, dev = _nearest_axis(ang)
+            if dev > 2.0:
+                warnings.append(f"iso: участок {seg.id} идёт под {ang:.0f}° — не по осям 0/±30/90")
+            if abs(axis - 30.0) < 0.5:
+                diagonal += 1
+    if not diagonal:
+        warnings.append("iso: ни одного наклонного участка — лист больше похож на план")
+
+    def _dist_to_pipe(p: tuple[float, float]) -> float:
+        best = 1e9
+        for seg in model.segments:
+            for a, b in zip(seg.points, seg.points[1:]):
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                l2 = dx * dx + dy * dy
+                if l2 < 1e-9:
+                    continue
+                t = max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2))
+                q = (a[0] + dx * t, a[1] + dy * t)
+                best = min(best, math.dist(p, q))
+        return best
+
+    for weld in model.welds:
+        d = _dist_to_pipe((weld.x, weld.y))
+        if d > 4.0:
+            warnings.append(f"iso: засечка шва {weld.id} в {d:.1f} мм от трубы")
+    for sup in model.supports:
+        d = _dist_to_pipe((sup.x, sup.y))
+        if d > 4.0:
+            warnings.append(f"iso: опора ({sup.x:g}, {sup.y:g}) в {d:.1f} мм от трубы")
     return warnings
 

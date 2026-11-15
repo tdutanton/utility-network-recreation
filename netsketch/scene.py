@@ -97,6 +97,10 @@ class MLeader(Prim):
     height: float = 2.5
     side: str = "left"  # с какой стороны текста крепится полка
     arrow: bool = True  # рисовать стрелки на концах веток
+    # `at` — точка привязки текста. В DXF MULTILEADER ставит текст верхним
+    # углом, поэтому подписи из эталонных DWG рисуются с valign="top",
+    # чтобы PDF/PNG совпадали с DWG.
+    valign: str = "bottom"  # bottom | middle | top
 
 
 @dataclass

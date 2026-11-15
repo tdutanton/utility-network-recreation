@@ -48,6 +48,25 @@ def _norm_angle(angle: float) -> float:
     return angle
 
 
+def _label_box(label_at: Point, width: float, height: float, align: str) -> tuple[float, float, float, float]:
+    """Габарит подписи: (x, y) — верхний угол, текст растёт вниз."""
+    x0 = label_at[0] if align == "left" else label_at[0] - width
+    return (x0, label_at[1] - height, x0 + width, label_at[1])
+
+
+def _leader_start(
+    label_at: Point, text: str, height: float, align: str, target: Point
+) -> tuple[Point, str]:
+    """Точка отрыва выноски — ближний к цели угол подписи и сторона полки."""
+    width = text_width(text, height)
+    box = _label_box(label_at, width, height, align)
+    right = target[0] >= (box[0] + box[2]) / 2
+    top = target[1] >= (box[1] + box[3]) / 2
+    x = box[2] if right else box[0]
+    y = box[3] if top else box[1]
+    return (x, y), ("right" if right else "left")
+
+
 def weld_mark(
     scene: Scene,
     at: Point,
@@ -57,7 +76,10 @@ def weld_mark(
     height: float = 2.2,
     stroke: float = WELD_STROKE,
     label_at: Point | None = None,
+    label_align: str = "left",
+    top_anchor: bool = False,
     rotate_text: bool = False,
+    leader: bool = True,
 ) -> None:
     """Штрих шва поперёк трубы и номер рядом.
 
@@ -65,6 +87,10 @@ def weld_mark(
     он наклонён примерно на 45–50° к трубе). Если известно, где автор
     поставил номер (`label_at`), номер ставится туда; иначе — рядом
     со штрихом по нормали.
+
+    В эталонных DWG номер — это MULTILEADER: стрелка у засечки и поводок
+    к верхнему углу текста (`label_align` = left|right). Поэтому `label_at`
+    трактуется как ВЕРХНИЙ угол подписи, а не как её левый низ.
     """
     rad = math.radians(angle)
     dx, dy = math.cos(rad) * stroke / 2, math.sin(rad) * stroke / 2
@@ -72,9 +98,9 @@ def weld_mark(
         Line(a=(at[0] - dx, at[1] - dy), b=(at[0] + dx, at[1] + dy), layer=LAYER_WELD, lw=0.195)
     )
 
+    align = "right" if str(label_align).lower() == "right" else "left"
     if label_at is not None:
         pos = label_at
-        align = "left"
     else:
         # смещение номера по нормали к штриху, предпочтительно вверх-влево
         nx, ny = -dy / (stroke / 2), dx / (stroke / 2)
@@ -84,8 +110,39 @@ def weld_mark(
         pos = (at[0] + nx * gap, at[1] + ny * gap)
         align = "center"
 
+    if top_anchor and label_at is not None and leader and math.dist(pos, at) > max(1.5, height * 0.7):
+        start, side = _leader_start(pos, str(number), height, align, at)
+        # MLeader рисует текст от левого края: при выключке вправо сдвигаем
+        text_at = pos if align != "right" else (pos[0] - text_width(str(number), height), pos[1])
+        scene.add(
+            MLeader(
+                text=str(number),
+                at=text_at,
+                leaders=[[start, at]],
+                height=height,
+                side=side,
+                arrow=True,
+                valign="top" if top_anchor else "bottom",
+                layer=LAYER_TEXT,
+                lw=0.18,
+            )
+        )
+        return
+
     rot = _norm_angle(angle) if rotate_text else 0.0
-    scene.add(Text(text=str(number), at=pos, height=height, rotation=rot, layer=LAYER_TEXT, align=align))
+    scene.add(
+        Text(
+            text=str(number),
+            at=pos,
+            height=height,
+            rotation=rot,
+            layer=LAYER_TEXT,
+            align=align,
+            # номер из модели привязан к верхнему углу (insert MULTILEADER),
+            # номер «по нормали» — по-старому от левого низа
+            valign="top" if (label_at is not None and top_anchor) else "bottom",
+        )
+    )
 
 
 def support_mark(
@@ -165,14 +222,87 @@ def callout(
     )
 
 
+def fixed_callout(
+    scene: Scene,
+    text: str,
+    target: Point | Sequence[Point],
+    at: Point,
+    *,
+    align: str = "left",
+    height: float = 2.2,
+) -> None:
+    """Выноска на месте автора: `at` — ВЕРХНИЙ угол текста (insert MULTILEADER).
+
+    В эталонных DWG подпись привязана верхним углом, а поводок идёт от
+    ближнего к цели угла текста к самому элементу. Авто-разводка такую
+    выноску не двигает.
+    """
+    targets = [target] if isinstance(target, tuple) else [t for t in target if t is not None]
+    if not targets:
+        return
+    side_align = "right" if str(align).lower() == "right" else "left"
+    start, side = _leader_start(at, text, height, side_align, targets[0])
+    leaders = [[start, end] for end in targets]
+    text_at = at
+    if side_align == "right":
+        # MLeader рисует текст от левого края: сдвигаем на ширину строки
+        text_at = (at[0] - text_width(text, height), at[1])
+    scene.add(
+        MLeader(
+            text=text,
+            at=text_at,
+            leaders=leaders,
+            height=height,
+            side=side,
+            layer=LAYER_TEXT,
+            lw=0.18,
+            arrow=True,
+            valign="top",
+        )
+    )
+
+
 def level_mark(scene: Scene, text: str, target: Point, *, side: str = "left", height: float = 2.2) -> None:
     """Отметка `Отм. -0.8` на полке у ввода/выпуска."""
     callout(scene, text, target, target, side=side, height=height)
 
 
-def room_label(scene: Scene, text: str, at: Point, *, height: float = 3.8) -> None:
-    """Крупная подпись помещения: `КВ. 5`, `1 под.`."""
-    scene.add(Text(text=text, at=at, height=height, layer=LAYER_TEXT))
+def room_label(
+    scene: Scene,
+    text: str,
+    at: Point,
+    *,
+    height: float = 3.8,
+    align: str = "left",
+    valign: str = "bottom",
+    leader: Sequence[Point] | None = None,
+    frame: bool = False,
+) -> None:
+    """Крупная подпись помещения: `КВ. 5`, `1 под.`.
+
+    В изометрии эталона подпись соединена с опуском тонким поводком —
+    он приходит из модели (`Room.leader`) в мм листа. `frame` обводит
+    подпись рамкой (в части эталонов квартиры обведены).
+    """
+    points = list(leader or [])
+    for a, b in zip(points, points[1:]):
+        scene.add(Line(a=a, b=b, layer=LAYER_TEXT, lw=0.13))
+    scene.add(
+        Text(text=text, at=at, height=height, align=align, valign=valign, layer=LAYER_TEXT)
+    )
+    if frame:
+        w = text_width(text, height) + 2.4
+        hh = height * 1.5
+        x0 = at[0] if align == "left" else at[0] - w
+        y1 = at[1] if valign == "top" else at[1] + height * 1.25
+        scene.add(
+            Polyline(
+                points=[(x0, y1 - hh), (x0 + w, y1 - hh), (x0 + w, y1), (x0, y1)],
+                closed=True,
+                layer=LAYER_TEXT,
+                lw=0.13,
+            )
+        )
 
 
 def summary_block(
@@ -215,8 +345,19 @@ def dimension_chain(
     height: float = 2.5,
     side: str = "auto",
     centroid: Point | None = None,
+    group_digits: bool = True,
+    avoid: Sequence[tuple[float, float, float, float]] = (),
+    text_at: Point | None = None,
 ) -> None:
-    """Размерная цепь с текстом над линией; `СШ`/`ОП` — префикс в тексте."""
+    """Размерная цепь с текстом над линией; `СШ`/`ОП` — префикс в тексте.
+
+    `group_digits` — разбивать тысячи пробелом (`3 370`); в части эталонов
+    размеры пишут без разбивки (`3370`).
+    `avoid` — прямоугольники подписей, которые текст не должен накрывать:
+    если середина отрезка занята, текст сдвигается вдоль размерной линии.
+    `text_at` — место подписи, заданное автором (DIMENSION text_midpoint):
+    тогда текст ставится точно туда и `avoid` не применяется.
+    """
     pts = list(points)
     if len(pts) < 2:
         return
@@ -254,13 +395,64 @@ def dimension_chain(
             continue
         ang = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
         ang = _norm_angle(ang)
-        label = f"{prefix} {fmt_mm(value)}".strip() if prefix else fmt_mm(value)
-        cx, cy = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
-        # текст над линией, сдвиг по нормали в ту же сторону
+        label = f"{prefix} {fmt_mm(value, group=group_digits)}".strip() if prefix else fmt_mm(value, group=group_digits)
+        width = text_width(label, height)
+        cos_a, sin_a = abs(math.cos(math.radians(ang))), abs(math.sin(math.radians(ang)))
+        bw, bh = width * cos_a + height * sin_a, width * sin_a + height * cos_a
+        # «вверх» в системе САМОГО текста: при rotation=ang это (-sin, cos).
+        # Для участков, идущих справа налево, это направление противоположно
+        # нормали линии (u = -n) — если брать n, текст ложится НА линию.
+        rad = math.radians(ang)
+        ux, uy = -math.sin(rad), math.cos(rad)
+
+        def _taken(at_point: Point) -> bool:
+            # подпись растёт вверх в своей системе: центр на height/2 выше базы
+            cx0, cy0 = at_point[0] + ux * height * 0.5, at_point[1] + uy * height * 0.5
+            x0, y0 = cx0 - bw / 2, cy0 - bh / 2
+            pad = 0.6  # просвет до соседней подписи
+            box = (x0 - pad, y0 - pad, x0 + bw + pad, y0 + bh + pad)
+            for r in avoid:
+                if not (box[2] <= r[0] or r[2] <= box[0] or box[3] <= r[1] or r[3] <= box[1]):
+                    return True
+            return False
+
+        # место автора (text_midpoint) — приоритет, если оно свободно
+        at = None
+        if text_at is not None and not _taken(tuple(text_at)):
+            at = (text_at[0], text_at[1])
+        if at is None:
+            # иначе середина отрезка; если и там чужая подпись — сдвиг по линии
+            for t in (0.5, 0.68, 0.32, 0.84, 0.16, 0.95, 0.05):
+                cx = p0[0] + (p1[0] - p0[0]) * t
+                cy = p0[1] + (p1[1] - p0[1]) * t
+                candidate = (cx + ux * 1.5, cy + uy * 1.5)
+                if not _taken(candidate):
+                    at = candidate
+                    break
+        if at is None:
+            if text_at is not None:
+                at = (text_at[0], text_at[1])
+            else:
+                cx, cy = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+                at = (cx + ux * 1.5, cy + uy * 1.5)
+
+        # если подпись оказалась почти на самой линии (в эталонах так бывает —
+        # автор поставил текст «в линию»), поднимаем её на стандартные 1,5 мм:
+        # линия не должна резать цифры
+        dxl, dyl = p1[0] - p0[0], p1[1] - p0[1]
+        ll = dxl * dxl + dyl * dyl or 1.0
+        t_proj = ((at[0] - p0[0]) * dxl + (at[1] - p0[1]) * dyl) / ll
+        near = (p0[0] + dxl * t_proj, p0[1] + dyl * t_proj)
+        across = (at[0] - near[0]) * ux + (at[1] - near[1]) * uy
+        if across < 1.0:
+            at = (near[0] + ux * 1.5, near[1] + uy * 1.5)
+
+        # текст ставится над линией в её собственной системе: вдоль +n на 1,5 мм
+        # (как DIMENSION эталона), поэтому линия никогда не режет цифры
         scene.add(
             Text(
                 text=label,
-                at=(cx + nx * sign * 1.0, cy + ny * sign * 1.0),
+                at=at,
                 height=height,
                 rotation=ang,
                 layer=LAYER_DIM,
@@ -269,9 +461,25 @@ def dimension_chain(
             )
         )
 
+        # подпись не влезла между выносными линиями — продлеваем размерную
+        # линию под ней, иначе текст «висит» без полки (как в эталонных DWG)
+        seg_len = math.hypot(dxl, dyl) or 1.0
+        ux, uy = dxl / seg_len, dyl / seg_len
+        t_center = (at[0] - p0[0]) * ux + (at[1] - p0[1]) * uy
+        t_lo, t_hi = t_center - width / 2, t_center + width / 2
+        overrun = 1.5
+        if t_lo < -0.3:
+            tail = (p0[0] + ux * (t_lo - overrun), p0[1] + uy * (t_lo - overrun))
+            scene.add(Line(a=tuple(p0), b=tail, layer=LAYER_DIM, lw=0.18))
+        if t_hi > seg_len + 0.3:
+            tail = (p1[0] + ux * (t_hi - seg_len + overrun), p1[1] + uy * (t_hi - seg_len + overrun))
+            scene.add(Line(a=tuple(p1), b=tail, layer=LAYER_DIM, lw=0.18))
 
-def fmt_mm(value: int | float) -> str:
-    """1500 → «1 500» (как в эталонных цепях)."""
+
+def fmt_mm(value: int | float, group: bool = True) -> str:
+    """1500 → «1 500» (как в эталонных цепях); `group=False` → «1500»."""
+    if not group:
+        return f"{int(round(value))}"
     return f"{int(round(value)):,}".replace(",", " ")
 
 
@@ -298,16 +506,21 @@ def draw_model_annotations(
 
     placed: list[tuple[float, float, float, float]] = []
 
-    def _text_rect(at: Point, text: str, height: float, align: str = "left") -> tuple[float, float, float, float]:
+    def _text_rect(
+        at: Point, text: str, height: float, align: str = "left", top: bool = False
+    ) -> tuple[float, float, float, float]:
         width = text_width(text, height)
         x0 = at[0] if align == "left" else at[0] - width
+        if top:
+            return (x0, at[1] - height, x0 + width, at[1] + height * 0.25)
         return (x0, at[1] - height * 0.25, x0 + width, at[1] + height * 1.25)
 
     def _rect(at: Point, side: str, text: str, height: float) -> tuple[float, float, float, float]:
         width = text_width(text, height) + 2.0
+        depth = height * max(1, text.count("\n") + 1)  # многострочная выноска выше
         if side in {"left", "right"}:
             x0 = at[0] if side == "right" else at[0] - width
-            return (x0, at[1] - height * 0.25, x0 + width, at[1] + height * 1.25)
+            return (x0, at[1] - height * 0.25, x0 + width, at[1] + depth + height * 0.25)
         depth = max(width, 6.0)
         y0 = at[1] if side == "up" else at[1] - depth
         return (at[0] - height * 0.25, y0, at[0] + height * 1.25, y0 + depth)
@@ -334,25 +547,40 @@ def draw_model_annotations(
         label_at = None
         if getattr(weld, "label_x", None) is not None and getattr(weld, "label_y", None) is not None:
             label_at = pt((weld.label_x, weld.label_y))
+        label_align = str(getattr(weld, "label_align", "") or "")
         weld_mark(
             scene,
             pt((weld.x, weld.y)),
             weld.id,
             weld.angle,
             label_at=label_at,
+            label_align=label_align or "left",
+            top_anchor=bool(label_align),
             height=height_weld,
             stroke=stroke,
         )
         if label_at is not None:
-            placed.append(_text_rect(label_at, str(weld.id), height_weld, align="left"))
+            placed.append(
+                _text_rect(label_at, str(weld.id), height_weld, align=label_align or "left", top=bool(label_align))
+            )
 
     for support_item in getattr(model, "supports", []):
         support_mark(scene, pt((support_item.x, support_item.y)), support_item.angle, size=support)
 
     for room in getattr(model, "rooms", []):
         at = pt((room.x, room.y))
-        room_label(scene, room.text, at, height=room.height)
-        placed.append(_text_rect(at, room.text, room.height))
+        align = str(getattr(room, "label_align", "") or "")
+        room_label(
+            scene,
+            room.text,
+            at,
+            height=room.height,
+            align=align or "left",
+            valign="top" if align else "bottom",
+            leader=[pt(p) for p in (getattr(room, "leader", None) or [])],
+            frame=bool(getattr(room, "frame", False)),
+        )
+        placed.append(_text_rect(at, room.text, room.height, align=align or "left", top=bool(align)))
 
     placed_callouts: list[tuple[float, float, float, float]] = []
 
@@ -375,6 +603,22 @@ def draw_model_annotations(
         rect = _rect(at, side, callout_item.text, height_callout)
         if getattr(callout_item, "fixed", False):
             # место задал автор модели — авто-разводка не двигает
+            align = str(getattr(callout_item, "align", "") or "")
+            if align:
+                # подпись привязана верхним углом (insert MULTILEADER эталона)
+                width = text_width(callout_item.text, height_callout)
+                x0 = at[0] if align == "left" else at[0] - width
+                rect = (x0, at[1] - height_callout, x0 + width, at[1])
+                placed_callouts.append(rect)
+                fixed_callout(
+                    scene,
+                    callout_item.text,
+                    targets,
+                    at,
+                    align=align,
+                    height=height_callout,
+                )
+                continue
             placed_callouts.append(rect)
             callout(scene, callout_item.text, targets, at, side=side, height=height_callout)
             continue
@@ -389,6 +633,13 @@ def draw_model_annotations(
         placed_callouts.append(rect)
         callout(scene, callout_item.text, targets, at, side=side, height=height_callout)
 
+    group_digits = bool(meta.get("dim_group", True))
+    # text_width для кириллицы завышен (~0,62·h на знак против ~0,5 у Arial),
+    # поэтому для проверки пересечений берём габарит уже: иначе текст размера
+    # «упирается» в соседнюю подпись, которой на листе фактически не касается
+    avoid_rects = [
+        (r[0], r[1], r[0] + (r[2] - r[0]) * 0.8, r[3]) for r in placed + placed_callouts
+    ]
     for chain in getattr(model, "chains", []):
         points = [pt(p) for p in chain.points]
         values = chain.values_mm or [
@@ -402,4 +653,7 @@ def draw_model_annotations(
             prefix=PREFIXES.get(chain.kind, ""),
             offset=chain.offset_mm or 8.0,
             side=chain.side,
+            group_digits=group_digits,
+            avoid=avoid_rects,
+            text_at=getattr(chain, "text_at", None),
         )

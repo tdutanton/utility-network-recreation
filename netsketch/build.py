@@ -50,9 +50,24 @@ def safe_stem(text: str, fallback: str = "drawing") -> str:
 
 
 def resolve_mode(model: Model, mode: str = "") -> str:
-    """Режим листа: `schematic` (ГОСТ-схема) или `plan` (план в масштабе)."""
-    value = (mode or str(model.meta.get("mode") or "") or "plan").lower()
-    return "schematic" if value.startswith("schem") else "plan"
+    """Режим листа: `schematic` (ГОСТ-схема) или `plan` (план в масштабе).
+
+    Явный аргумент важнее модели; `Model.mode` важнее `meta.mode`
+    (meta остаётся для старых моделей, где режим писали туда).
+    `iso` (аксонометрия фасада) — тот же лист ГОСТ, что и схема: труба уже
+    задана ломаной в мм листа, ортогонализовать её нельзя.
+    """
+    value = (
+        mode
+        or str(getattr(model, "mode", "") or "")
+        or str(model.meta.get("mode") or "")
+        or "plan"
+    ).lower()
+    if value.startswith("schem"):
+        return "schematic"
+    if value.startswith(("iso", "axon")):
+        return "schematic"
+    return "plan"
 
 
 def as_gost_sheet(sheet: Sheet | GostSheet | None, model: Model, mode: str) -> GostSheet:
@@ -62,7 +77,8 @@ def as_gost_sheet(sheet: Sheet | GostSheet | None, model: Model, mode: str) -> G
     if isinstance(sheet, Sheet):
         return GostSheet(sheet.format, "landscape" if mode == "schematic" else sheet.orientation, sheet.stamp)
     if mode == "schematic":
-        return GostSheet("A3", "landscape", "auto")
+        # угол штампа автор может задать в meta: в изометрии свободен правый низ
+        return GostSheet("A3", "landscape", str(model.meta.get("stamp") or "auto"))
     return GostSheet(model.sheet or "A4", model.orientation or "portrait", model.meta.get("stamp", "right"))
 
 

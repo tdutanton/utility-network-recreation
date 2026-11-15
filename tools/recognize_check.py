@@ -205,11 +205,12 @@ def compare(model_path: Path, expected: dict) -> list[str]:
     if want_total and model.summary:
         m = None
         for line in model.summary:
-            hit = re.search(r"Итого[^\d]*([\d.,]+)", line)
+            # в эталонах итог пишут и «Итого 9,2 м», и «lобщ= 85 м»
+            hit = re.search(r"(?:Итого|lобщ|всего)[^\d\-]*([\d.,]+)", line, re.IGNORECASE)
             if hit:
                 m = float(hit.group(1).replace(",", "."))
         if m is None:
-            problems.append("в итоговом блоке нет строки «Итого»")
+            problems.append("в итоговом блоке нет строки «Итого»/«lобщ»")
         elif abs(m - want_total) > 0.15:
             problems.append(f"итог {m:g} м вместо {want_total:g} м")
 

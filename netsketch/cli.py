@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     p_build.add_argument("--out", default="output")
     p_build.add_argument("--stem", default="")
     p_build.add_argument("--scale", type=int, default=0)
-    p_build.add_argument("--mode", default="", choices=["", "plan", "schematic"],
+    p_build.add_argument("--mode", default="", choices=["", "plan", "schematic", "iso"],
                          help="plan — план в масштабе, schematic — лист ГОСТ с штампом")
     p_build.add_argument("--stamp", default="", choices=["", "left", "right", "auto"],
                          help="угол штампа для schematic")

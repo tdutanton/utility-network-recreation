@@ -932,6 +932,14 @@ def _draw_legend_block(
             draw_symbol(scene, marker, (x + 3.4, y + mh * 0.25), size=mh, layer="LEGEND")
         elif marker:
             scene.add(Text(text=marker, at=(x + 1.6, y), height=mh, layer="LEGEND"))
+        else:
+            # строка про размерную цепь: рисуем образец цепи — черта с засечками
+            y0 = y + mh * 0.45
+            scene.add(Line(a=(x - 0.5, y0), b=(x + 8.0, y0), layer="LEGEND", lw=0.18))
+            for xx in (x - 0.5, x + 8.0):
+                scene.add(
+                    Line(a=(xx - 1.0, y0 - 1.0), b=(xx + 1.0, y0 + 1.0), layer="LEGEND", lw=0.18)
+                )
         scene.add(Text(text=f"- {text}", at=(x + 12.0, y), height=height, layer="LEGEND"))
         y -= step
     return y + step - 1.5
