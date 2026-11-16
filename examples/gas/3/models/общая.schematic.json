@@ -1100,32 +1100,44 @@
   "rooms": [],
   "callouts": [
     {
-      "text": "Кран \nДу50 сущ.",
+      "text": "Кран\nДу50 сущ.",
       "targets": [
         [
-          257.3,
-          241.2
+          259.7,
+          242.7
         ]
       ],
       "x": 246.1,
       "y": 236.7,
       "side": "left",
       "align": "right",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        246.8,
+        234.9
+      ],
+      "tx": 259.7,
+      "ty": 242.7
     },
     {
       "text": "Граница работ",
       "targets": [
         [
-          257.0,
-          245.1
+          259.7,
+          245.8
         ]
       ],
       "x": 244.0,
       "y": 243.8,
       "side": "left",
       "align": "right",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        244.7,
+        242.0
+      ],
+      "tx": 259.7,
+      "ty": 245.8
     },
     {
       "text": "Переход\n57-40",
@@ -1139,7 +1151,11 @@
       "y": 281.5,
       "side": "right",
       "align": "right",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        267.7,
+        280.4
+      ]
     },
     {
       "text": "Переход\n40-32",
@@ -1153,7 +1169,11 @@
       "y": 197.8,
       "side": "right",
       "align": "left",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        323.2,
+        196.7
+      ]
     },
     {
       "text": "Заглушка Ду32",
@@ -1167,7 +1187,11 @@
       "y": 38.6,
       "side": "left",
       "align": "right",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        75.7,
+        37.2
+      ]
     },
     {
       "text": "Далее - ввод Ст Г1-1\nДу25 в кухню кв. №1",
@@ -1181,7 +1205,11 @@
       "y": 149.9,
       "side": "right",
       "align": "left",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        326.0,
+        148.5
+      ]
     },
     {
       "text": "Далее - ввод Ст Г1-2\nДу25 в кухню кв. №2",
@@ -1195,7 +1223,11 @@
       "y": 83.2,
       "side": "right",
       "align": "left",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        219.6,
+        81.8
+      ]
     },
     {
       "text": "Далее - ввод Ст Г1-3\nДу25 в кухню кв. №5",
@@ -1209,7 +1241,11 @@
       "y": 73.8,
       "side": "right",
       "align": "left",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        214.0,
+        72.4
+      ]
     },
     {
       "text": "Далее - ввод Ст Г1-4\nДу25 в кухню кв. №6",
@@ -1223,7 +1259,11 @@
       "y": 25.6,
       "side": "right",
       "align": "left",
-      "fixed": true
+      "fixed": true,
+      "elbow": [
+        110.7,
+        24.2
+      ]
     }
   ],
   "labels": [

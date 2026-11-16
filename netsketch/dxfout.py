@@ -97,18 +97,49 @@ def scene_to_dxf(scene: Scene, network_type: str, *, dxf_version: str = "R2018",
 
 
 def _add_mleader(msp, p: "MLeader", at: dict) -> None:
-    """Настоящий MULTILEADER: в CAD правится одним объектом (полка+текст+стрелки)."""
-    from ezdxf.math import Vec2
+    """Настоящий MULTILEADER: в CAD правится одним объектом (полка+текст+стрелки).
+
+    Вершины ветки в DXF — это остриё и (для излома) точка излома; последняя
+    точка поводка и вектор полки хранятся отдельно в `last_leader_point` /
+    `dogleg_vector`. Если отдать builder'у всю ломаную, он допишет свою
+    «собачью ножку» от острия к тексту — в DWG появляется лишняя линия
+    через весь лист. Поэтому после build подменяем last_leader_point и
+    dogleg на наши (полка под текстом / короткий поводок).
+    """
+    from ezdxf.math import Vec2, Vec3
     from ezdxf.render.mleader import ConnectionSide
 
     builder = msp.add_multileader_mtext(MLEADER_STYLE, dxfattribs=at)
     builder.set_content(p.text, char_height=max(p.height, 0.5))
     side = ConnectionSide.right if p.side == "right" else ConnectionSide.left
+    groups: dict[object, tuple[Vec2, Vec2]] = {}
     for leader in p.leaders:
         if len(leader) < 2:
             continue
-        builder.add_leader_line(side, [Vec2(*q) for q in leader])
+        tip = Vec2(*leader[-1])
+        if len(leader) >= 3:
+            elbow = Vec2(*leader[-2])
+            far = Vec2(*leader[0])
+        else:
+            # прямая выноска: полки нет, last_leader_point = начало у текста
+            elbow = Vec2(*leader[0])
+            far = elbow
+        builder.add_leader_line(side, [tip, elbow])
+        groups[side] = (elbow, far)
     builder.build(insert=Vec2(*p.at))
+
+    for leader_data, (elbow, far) in zip(builder.multileader.context.leaders, groups.values()):
+        leader_data.last_leader_point = Vec3(elbow.x, elbow.y, 0)
+        vec = Vec3(far.x - elbow.x, far.y - elbow.y, 0)
+        length = vec.magnitude
+        leader_data.dogleg_length = length
+        if length > 1e-9:
+            leader_data.dogleg_vector = vec.normalize()
+            leader_data.has_dogleg_vector = 1
+        else:
+            leader_data.dogleg_vector = Vec3(1, 0, 0)
+            leader_data.has_dogleg_vector = 0
+    builder.multileader.update_proxy_graphic()
 
 
 def _add_prim(msp, p: Prim) -> None:

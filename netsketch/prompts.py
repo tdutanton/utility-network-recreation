@@ -31,7 +31,8 @@ SCHEMA_HINT = """{
   "chains": [{"kind": "weld|support|plain", "points": [[x, y], [x, y]], "values_mm": [1000],
               "offset_mm": 8, "side": "plus|minus|auto", "text_at": [x, y]}],
   "callouts": [{"text": "Отвод Ø25", "target": [0, 0], "x": 0, "y": 0,
-                "side": "left|right|up|down", "fixed": false, "align": "left|right"}],
+                "side": "left|right|up|down", "fixed": false, "align": "left|right",
+                "elbow": [0, 0]}],
   "rooms": [{"text": "КВ. 5", "x": 0, "y": 0, "height": 3.8, "label_align": "left|right",
              "leader": [[x, y], [x, y]]}],
   "summary": ["Наружный газ-д", "ст.д.25 l= 2,5 м", "Итого 9,2 м"],
@@ -57,9 +58,11 @@ SCHEMATIC_RULES = """Если эскиз — исполнительная схе
    Цепь — НЕ второй трубопровод: не добавляй её в segments.
 4. **Выноски на полке** → callouts[]: text как на эскизе (`Отвод Ø25`,
    `Переход Ø25/20`, `Кран Ø15`, `КИП Ø25`, `КГЗ Ø20`, `КЭМ Ø20`),
-   `target` — точка на трубе/символе, `x`/`y` — конец полки, `side` —
-   куда уходит текст. Если место выноски задано точно, `fixed: true`,
-   `x`/`y` — верхний угол текста, `align` — край (`left`/`right`).
+   `target` — точка на трубе/символе, `x`/`y` — верхний угол текста
+   (`align` — `left`/`right`), `side` — куда уходит текст от острия.
+   `elbow` — излом поводка, где диагональ переходит в полку под текстом
+   (в эталонном DWG это `last_leader_point`). Если места нет — `fixed: false`,
+   тогда `x`/`y` — конец полки и выноску можно двигать.
 5. **Помещения/подъезды** (`КВ. 5`, `КВ. 1`, `1 под.`) → rooms[]; если
    подпись соединена с опуском поводком, `leader`: [[x, y], …], а при
    точном месте — `label_align` (`left`/`right`).

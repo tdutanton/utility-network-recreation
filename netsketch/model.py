@@ -257,6 +257,11 @@ class Callout:
     # у `fixed`-выноски (x, y) — не полка, а ВЕРХНИЙ угол текста (как insert
     # MULTILEADER в эталонном DWG); `align` — к какому краю прижат текст.
     align: str = ""  # left | right | "" (взять из side)
+    # Излом поводка: точка, где диагональ от острия переходит в полку/поводок
+    # (`last_leader_point` MULTILEADER в эталонном DWG). Полку рендер строит
+    # сам: под текстом на всю ширину, если излом лёг у низа строки, иначе —
+    # короткий поводок к ближнему краю текста.
+    elbow: tuple[float, float] | None = None
     state: str = CONFIRMED
 
 
@@ -407,6 +412,8 @@ class Model:
                 pts.append((c.x, c.y))
             if c.tx is not None and c.ty is not None:
                 pts.append((c.tx, c.ty))
+            if c.elbow is not None:
+                pts.append(c.elbow)
         return pts
 
     def bbox(self) -> tuple[float, float, float, float] | None:
@@ -675,6 +682,7 @@ def model_from_dict(data: dict[str, Any]) -> tuple[Model, list[str]]:
                 side=str(raw.get("side") or "left").lower(),
                 fixed=bool(raw.get("fixed")),
                 align=str(raw.get("align") or "").lower(),
+                elbow=_point(raw.get("elbow")),
                 state=_state(raw.get("state")),
             )
         )
@@ -903,6 +911,10 @@ def validate_model(model: Model) -> list[str]:
             warnings.append(f"выноска «{text}»: похоже на Ø, прочитанный как 0/О")
         if co.tx is None and co.x is None:
             warnings.append(f"выноска «{text}» без привязки (target)")
+        if co.elbow is not None and co.targets:
+            gap = min(math.dist(co.elbow, t) for t in co.targets)
+            if gap > 80.0:
+                warnings.append(f"выноска «{text}»: излом в {gap:.0f} мм от острия — проверь elbow")
 
     if model.summary:
         rows = [v for line in model.summary for v in _SUMMARY_ROW.findall(line)]

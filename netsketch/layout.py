@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 
 from .model import ASSUMED, ELEMENT_TYPES, Model, Segment
@@ -315,6 +316,31 @@ def _rects_overlap(a, b) -> bool:
     return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
 
 
+def _snap_to_pipe(
+    p: tuple[float, float],
+    model: Model,
+    transform: Transform,
+    max_dist: float = 8.0,
+) -> tuple[float, float] | None:
+    """Ближайшая точка на оси трубы: маркер дефекта не должен висеть в воздухе."""
+    best: tuple[float, tuple[float, float]] | None = None
+    for seg in model.segments:
+        pts = [transform.pt(q) for q in seg.points]
+        for a, b in zip(pts, pts[1:]):
+            dx, dy = b[0] - a[0], b[1] - a[1]
+            l2 = dx * dx + dy * dy
+            if l2 < 1e-9:
+                continue
+            t = max(0.0, min(1.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2))
+            q = (a[0] + dx * t, a[1] + dy * t)
+            d = math.dist(p, q)
+            if best is None or d < best[0]:
+                best = (d, q)
+    if best is not None and best[0] <= max_dist:
+        return best[1]
+    return None
+
+
 def _place_labels(
     scene: Scene,
     model: Model,
@@ -338,6 +364,28 @@ def _place_labels(
 
     for p, lbl in items:
         height = max(lbl.height, 2.0)
+        if lbl.role == "defect":
+            # дефект на трубе — только маркер: номера свернуты в ведомость
+            # справа, иначе 130 кружков с цифрами закрывают весь план.
+            # Текст дефекта в DWG часто стоит рядом с трубой — прижимаем
+            # маркер к оси, иначе точки висят в пустоте.
+            snapped = _snap_to_pipe(p, model, transform)
+            if snapped is not None:
+                p = snapped
+            r = 1.0
+            layer = layer_of(model.network_type, "label")
+            scene.add(Circle(c=p, r=r, layer=layer, lw=0.35, state=lbl.state))
+            # точка внутри, чтобы маркер не путался с «Ø» на трубе
+            k = 0.5
+            scene.add(
+                Solid(
+                    points=[(p[0], p[1] + k), (p[0] + k, p[1]), (p[0], p[1] - k), (p[0] - k, p[1])],
+                    layer=layer,
+                    state=lbl.state,
+                )
+            )
+            placed.append((p[0] - r, p[1] - r, p[0] + r, p[1] + r))
+            continue
         width = text_width(lbl.text, height)
 
         near = None
@@ -466,6 +514,11 @@ def build_scene(
     title.setdefault("developer", model.title.developer)
     title.setdefault("checker", model.title.checker)
 
+    meta = model.meta if isinstance(model.meta, dict) else {}
+    absolute_blocks = bool(
+        meta.get("legend_at") or meta.get("notes_at") or meta.get("defect_table_at")
+    )
+
     # правая колонка под легенду и таблицы
     legend_width = 0.0
     if sheet.width >= 800:
@@ -478,13 +531,43 @@ def build_scene(
         legend_width = 72.0
     else:
         legend_width = 58.0
+    if absolute_blocks:
+        # легенда/ведомость стоят по абсолютным координатам автора
+        # (тепловые листы): правую колонку не резервируем, а верхнюю полосу
+        # под них отрезаем от области плана, иначе план наезжает на таблицу
+        legend_width = 0.0
 
     plan = sheet.plan_area(legend_width=legend_width)
+    if absolute_blocks:
+        top_limit = plan[3]
+        legend_at = meta.get("legend_at")
+        if legend_at:
+            top_limit = min(top_limit, float(legend_at[1]) - 10.0 - 8.0 * len(model.legend))
+        defect_at = meta.get("defect_table_at")
+        if defect_at:
+            data = _defect_table_data(model)
+            rows = len(data["rows"]) if data else 0
+            table_bottom = float(defect_at[1]) - 9.2 - 4.4 * rows
+            top_limit = min(top_limit, table_bottom)
+        if top_limit > plan[1] + 40.0:
+            plan = (plan[0], plan[1], plan[2], top_limit - 3.0)
 
-    transform, tinfo = _apply_transform(model, sheet, plan)
+    if str(meta.get("placement") or "").lower() == "absolute":
+        # модель уже в мм листа (тепловой план из DWG, ручная доводка).
+        # Раньше её прогоняли через пиксельный transform с переворотом Y —
+        # лист вставал «с ног на голову».
+        transform = IdentityTransform(
+            scale=1.0,
+            mm_per_px=1.0,
+            bbox=model.bbox() or (0.0, 0.0, sheet.width, sheet.height),
+        )
+        tinfo = LayoutInfo(scale=1)
+        tinfo.plan_bounds = transform.bbox
+    else:
+        transform, tinfo = _apply_transform(model, sheet, plan)
     info.warnings.extend(tinfo.warnings)
     info.assumed.extend(tinfo.assumed)
-    if scale_override:
+    if scale_override and not isinstance(transform, IdentityTransform):
         transform.scale = scale_override
         info.scale = scale_override
     info.mm_per_px = transform.mm_per_px
@@ -498,7 +581,8 @@ def build_scene(
     _draw_network(scene, model, transform, plan, info, centroid_px)
 
     # ---------------- рамка и штамп ----------------
-    scale_text = f"1:{transform.scale}"
+    # масштаб на схемах не печатаем: поле штампа остаётся пустым
+    scale_text = ""
     sheet.draw(
         scene,
         title=title,
@@ -507,7 +591,9 @@ def build_scene(
     )
 
     # ---------------- правая колонка ----------------
-    if legend_width:
+    if _draw_absolute_blocks(scene, model):
+        pass  # легенда/примечания стоят по месту автора (тепловые схемы)
+    elif legend_width:
         right_bottom = sheet.frame[1] + 4 if sheet.stamp == "vertical" else sheet.title_block[3] + 4
         _draw_right_column(
             scene,
@@ -731,6 +817,112 @@ def _place_along_text(
 
 
 # ----------------------------------------------------------------------
+DEFECT_NAMES: dict[str, str] = {
+    "2": "нарушение окраски приборов, стояков",
+    "7": "нарушение теплоизоляции",
+    "12": "ржавые подтеки, хомуты, свищи",
+    "13": "протечки запорной арматуры",
+    "14": "следы ремонта, замена труб",
+    "15": "коррозия запорной арматуры",
+    "17": "коррозия трубопроводов",
+}
+
+
+def _defect_table_data(model: Model) -> dict | None:
+    """Сводка дефектов: коды × подъезды (по x-полосам подписей «N подъезд»)."""
+    defects = [
+        lbl
+        for lbl in model.labels
+        if lbl.role == "defect" and str(lbl.text).strip().isdigit()
+    ]
+    if not defects:
+        return None
+    entrances: list[tuple[int, float]] = []
+    for lbl in model.labels:
+        if lbl.role != "note":
+            continue
+        m = re.match(r"^\s*(\d+)\s*подъезд", str(lbl.text), re.IGNORECASE)
+        if m:
+            entrances.append((int(m.group(1)), float(lbl.x)))
+    entrances.sort(key=lambda item: item[1])  # слева направо, как на листе
+    codes = sorted({str(lbl.text).strip() for lbl in defects}, key=int)
+
+    if entrances:
+        xs = [x for _, x in entrances]
+        bounds = [(xs[i] + xs[i + 1]) / 2 for i in range(len(xs) - 1)]
+        columns = [f"{number} п." for number, _ in entrances]
+        col_widths = (9.0, 58.0) + (10.0,) * len(columns) + (12.0,)
+    else:
+        bounds = []
+        columns = ["Всего"]
+        col_widths = (10.0, 80.0, 15.0)
+
+    matrix = [[0] * len(columns) for _ in codes]
+    for lbl in defects:
+        code = str(lbl.text).strip()
+        group = 0
+        for bound in bounds:
+            if float(lbl.x) > bound:
+                group += 1
+        matrix[codes.index(code)][group] += 1
+
+    header = ["Код", "Наименование дефекта", *columns, "Всего"]
+    rows: list[list[str]] = []
+    for i, code in enumerate(codes):
+        rows.append([code, DEFECT_NAMES.get(code, "дефект"), *[str(v) for v in matrix[i]], str(sum(matrix[i]))])
+    totals = [sum(matrix[i][j] for i in range(len(codes))) for j in range(len(columns))]
+    rows.append(["", "Итого", *[str(v) for v in totals], str(sum(totals))])
+    title = "Ведомость дефектов по подъездам" if entrances else "Ведомость дефектов"
+    return {"header": header, "rows": rows, "col_widths": col_widths, "title": title}
+
+
+def _draw_absolute_blocks(scene: Scene, model: Model) -> bool:
+    """Легенда, примечания и ведомость дефектов по координатам модели."""
+    meta = model.meta if isinstance(model.meta, dict) else {}
+    legend_at = meta.get("legend_at")
+    notes_at = meta.get("notes_at")
+    defect_at = meta.get("defect_table_at")
+    if not legend_at and not notes_at and not defect_at:
+        return False
+    if legend_at:
+        x0, y0 = float(legend_at[0]), float(legend_at[1])
+        rows = list(model.legend)
+        y = y0 - 3.0
+        scene.add(Text(text="Условные обозначения:", at=(x0, y), height=3.2, layer="LEGEND"))
+        y -= 7.0
+        for item in rows:
+            sym = item.symbol
+            if sym in ELEMENT_TYPES:
+                draw_symbol(scene, sym, (x0 + 2.4, y - 2.6), size=3.2, layer="LEGEND")
+            elif sym in {"—", "-", "line"}:
+                scene.add(Line(a=(x0 + 0.5, y - 2.6), b=(x0 + 6.0, y - 2.6), layer="LEGEND", lw=0.3))
+            elif sym:
+                scene.add(Text(text=sym, at=(x0 + 2.0, y - 4.0), height=3.0, layer="LEGEND"))
+            scene.add(Text(text=item.text, at=(x0 + 8.0, y - 4.0), height=2.8, layer="LEGEND"))
+            y -= 8.0
+    if defect_at:
+        data = _defect_table_data(model)
+        if data:
+            from .annotations import defect_table
+
+            defect_table(
+                scene,
+                data["header"],
+                data["rows"],
+                (float(defect_at[0]), float(defect_at[1])),
+                col_widths=data["col_widths"],
+                title=data["title"],
+            )
+    if notes_at and not defect_at:
+        x0, y0 = float(notes_at[0]), float(notes_at[1])
+        y = y0 - 3.5
+        for note in model.notes:
+            for line in str(note).split("\n"):
+                scene.add(Text(text=line, at=(x0, y), height=3.2, layer="TEXT"))
+                y -= 4.6
+    return True
+
+
 def _draw_right_column(
     scene: Scene,
     model: Model,
@@ -774,7 +966,9 @@ def _draw_right_column(
 
     # 2. Спецификация
     spec = list(model.specification)
-    if not spec and model.segments:
+    # длины известны только если они есть в модели (length_mm); иначе таблица
+    # из «нарисованных» длин врёт — не показываем её вовсе
+    if not spec and model.segments and any(s.length_mm for s in model.segments):
         agg: dict[int, float] = {}
         for s in model.segments:
             if s.diameter_mm:

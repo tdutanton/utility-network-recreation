@@ -67,6 +67,20 @@ def _leader_start(
     return (x, y), ("right" if right else "left")
 
 
+def _callout_box(
+    label_at: Point, text: str, height: float, align: str
+) -> tuple[float, float, float, float]:
+    """Габарит подписи выноски: (x0, y0, x1, y1), текст растёт вниз от `label_at`.
+
+    `label_at` — верхний угол текста (insert MULTILEADER): левый при
+    `align="left"`, правый при `align="right"`.
+    """
+    width = text_width(text, height)
+    lines = max(1, str(text).count("\n") + 1)
+    x0 = label_at[0] if align != "right" else label_at[0] - width
+    return (x0, label_at[1] - height * lines, x0 + width, label_at[1])
+
+
 def weld_mark(
     scene: Scene,
     at: Point,
@@ -222,6 +236,24 @@ def callout(
     )
 
 
+def _callout_shelf_start(
+    box: tuple[float, float, float, float], elbow: Point, at: Point, height: float
+) -> Point:
+    """Начало ветки у текста: дальний край полки или ближний край при поводке.
+
+    Полка (длинная линия под текстом) есть только там, где излом лёг на
+    нижнюю часть строки (`elbow.y` ниже середины). Если автор прицепил
+    поводок сбоку текста (изо-схемы Валдая), полки нет: ветка начинается
+    у ближнего края текста на высоте излома. Иначе линия прошла бы сквозь
+    подпись — именно так «перечёркивались» выноски изометрии.
+    """
+    near_x = box[0] if abs(elbow[0] - box[0]) <= abs(elbow[0] - box[2]) else box[2]
+    if elbow[1] <= at[1] - 0.55 * height:
+        far_x = box[2] if near_x == box[0] else box[0]
+        return (far_x, elbow[1])
+    return (near_x, elbow[1])
+
+
 def fixed_callout(
     scene: Scene,
     text: str,
@@ -230,23 +262,48 @@ def fixed_callout(
     *,
     align: str = "left",
     height: float = 2.2,
+    elbow: Point | None = None,
 ) -> None:
     """Выноска на месте автора: `at` — ВЕРХНИЙ угол текста (insert MULTILEADER).
 
-    В эталонных DWG подпись привязана верхним углом, а поводок идёт от
-    ближнего к цели угла текста к самому элементу. Авто-разводка такую
-    выноску не двигает.
+    Если задан `elbow` (излом поводка из `last_leader_point` эталонного DWG),
+    ветка строится как в авторском листе: острие → излом → полка/поводок.
+    Когда излом лежит у нижней части строки, полка идёт до дальнего края
+    текста (её длина равна ширине подписи) — как на печатном эталоне
+    квартирных схем. Когда автор прицепил поводок к боку текста (изометрия
+    Валдая), рисуется короткий поводок у края, без линии сквозь подпись.
+    Без `elbow` — прежняя короткая выноска от ближнего угла текста.
     """
     targets = [target] if isinstance(target, tuple) else [t for t in target if t is not None]
     if not targets:
         return
     side_align = "right" if str(align).lower() == "right" else "left"
-    start, side = _leader_start(at, text, height, side_align, targets[0])
-    leaders = [[start, end] for end in targets]
     text_at = at
     if side_align == "right":
         # MLeader рисует текст от левого края: сдвигаем на ширину строки
         text_at = (at[0] - text_width(text, height), at[1])
+
+    if elbow is not None:
+        box = _callout_box(at, text, height, side_align)
+        start = _callout_shelf_start(box, elbow, at, height)
+        leaders = [[start, elbow, end] for end in targets]
+        scene.add(
+            MLeader(
+                text=text,
+                at=text_at,
+                leaders=leaders,
+                height=height,
+                side="right" if start[0] >= elbow[0] else "left",
+                layer=LAYER_TEXT,
+                lw=0.18,
+                arrow=True,
+                valign="top",
+            )
+        )
+        return
+
+    start, side = _leader_start(at, text, height, side_align, targets[0])
+    leaders = [[start, end] for end in targets]
     scene.add(
         MLeader(
             text=text,
@@ -303,6 +360,103 @@ def room_label(
                 lw=0.13,
             )
         )
+
+
+def defect_table(
+    scene: Scene,
+    header: Sequence[str],
+    rows: Sequence[Sequence[str]],
+    at: Point,
+    *,
+    col_widths: Sequence[float] = (9.0, 60.0, 10.0, 10.0, 10.0, 10.0, 12.0),
+    title: str = "Ведомость дефектов",
+    height: float = 2.3,
+) -> float:
+    """Таблица дефектов справа: строки — коды, столбцы — подъезды.
+
+    `at` — правый верхний угол таблицы (мм листа). Последняя строка `rows`
+    считается итоговой и рисуется полужирным. Возвращает нижнюю границу,
+    чтобы компоновка знала, сколько места занято.
+    """
+    if len(header) != len(col_widths) or any(len(r) != len(col_widths) for r in rows):
+        raise ValueError("defect_table: число столбцов не совпадает с col_widths")
+    width_total = sum(col_widths)
+    x_right, y_top = at
+    x0 = x_right - width_total
+    title_h = 4.6
+    head_h = 4.6
+    row_h = 4.4
+    y_positions = [y_top, y_top - title_h, y_top - title_h - head_h]
+    for _ in rows:
+        y_positions.append(y_positions[-1] - row_h)
+    y_bottom = y_positions[-1]
+
+    xs = [x0]
+    for w in col_widths:
+        xs.append(xs[-1] + w)
+
+    scene.add(
+        Polyline(
+            points=[(x0, y_bottom), (x0, y_top), (x_right, y_top), (x_right, y_bottom), (x0, y_bottom)],
+            layer="TEXT",
+            lw=0.3,
+        )
+    )
+    for y in y_positions[1:-1]:
+        scene.add(Line(a=(x0, y), b=(x_right, y), layer="TEXT", lw=0.18))
+    for x in xs[1:-1]:
+        # вертикали начинаются под строкой заголовка: она во всю ширину
+        scene.add(Line(a=(x, y_bottom), b=(x, y_positions[1]), layer="TEXT", lw=0.18))
+
+    # заголовок во всю ширину
+    scene.add(
+        Text(
+            text=title,
+            at=((x0 + x_right) / 2, y_top - title_h / 2),
+            height=3.0,
+            layer="TEXT",
+            align="center",
+            valign="middle",
+            bold=True,
+        )
+    )
+
+    def cell(row: int, col: int, text: str, *, bold: bool = False, left: bool = False) -> None:
+        y = (y_positions[row] + y_positions[row + 1]) / 2
+        if left:
+            scene.add(
+                Text(
+                    text=text,
+                    at=(xs[col] + 1.0, y),
+                    height=height,
+                    layer="TEXT",
+                    align="left",
+                    valign="middle",
+                    bold=bold,
+                )
+            )
+        else:
+            scene.add(
+                Text(
+                    text=text,
+                    at=((xs[col] + xs[col + 1]) / 2, y),
+                    height=height,
+                    layer="TEXT",
+                    align="center",
+                    valign="middle",
+                    bold=bold,
+                )
+            )
+
+    # после заголовка идёт строка header, затем данные
+    head_index = 1
+    for col, value in enumerate(header):
+        cell(head_index, col, value, bold=True, left=col == 1)
+    for r, row_values in enumerate(rows):
+        is_total = r == len(rows) - 1
+        for col, value in enumerate(row_values):
+            cell(head_index + 1 + r, col, value, bold=is_total, left=col == 1)
+    return y_bottom
 
 
 def summary_block(
@@ -599,6 +753,28 @@ def draw_model_annotations(
             offsets += [(0.0, step * k), (0.0, -step * k)]
         for k in range(1, 4):
             offsets += [(-step * 1.6 * k, 0.0), (step * 1.6 * k, 0.0)]
+
+        elbow_raw = getattr(callout_item, "elbow", None)
+        if elbow_raw is not None:
+            # авторская геометрия поводка: острие -> излом -> полка -> текст
+            elbow = pt((elbow_raw[0], elbow_raw[1]))
+            align = str(getattr(callout_item, "align", "") or "")
+            if not align:
+                if abs(elbow[0] - at[0]) < 0.2:
+                    align = "left" if side != "left" else "right"
+                else:
+                    align = "left" if elbow[0] < at[0] else "right"
+            placed_callouts.append(_callout_box(at, callout_item.text, height_callout, align))
+            fixed_callout(
+                scene,
+                callout_item.text,
+                targets,
+                at,
+                align=align,
+                height=height_callout,
+                elbow=elbow,
+            )
+            continue
 
         rect = _rect(at, side, callout_item.text, height_callout)
         if getattr(callout_item, "fixed", False):
